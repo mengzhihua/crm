@@ -1,0 +1,121 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #303133;
+  background: #f4f7fb;
+  font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.layout {
+  min-height: 100vh;
+}
+
+.el-aside {
+  background: #182230;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding-left: 25px;
+  color: #fff;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.el-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px !important;
+  border-bottom: 1px solid #e9edf2;
+  background: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.user {
+  color: #7b8794;
+  font-size: 14px;
+}
+
+.el-main {
+  padding: 22px;
+}
+
+.page-title {
+  margin-bottom: 18px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.metric {
+  padding: 18px;
+}
+
+.metric .num {
+  margin-top: 9px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chart {
+  height: 300px;
+}
+
+.kanban {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+}
+
+.kanban-col {
+  min-width: 230px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f0f2f5;
+}
+
+.kanban-card {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 1px 3px #ddd;
+}
+
+.overdue-row {
+  color: #f56c6c;
+  background: #fff1f0 !important;
+}
+
+@media (max-width: 900px) {
+  .card-grid,
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}
