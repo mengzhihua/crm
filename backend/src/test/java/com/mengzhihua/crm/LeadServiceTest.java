@@ -1,0 +1,4 @@
+package com.mengzhihua.crm;
+import com.mengzhihua.crm.common.*;import com.mengzhihua.crm.sales.entity.*;import com.mengzhihua.crm.sales.repository.*;import com.mengzhihua.crm.sales.service.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.test.context.ActiveProfiles;import java.util.*;
+@SpringBootTest @ActiveProfiles("test") class LeadServiceTest { @Autowired LeadService service; @Autowired LeadRepository repo;
+ @Test void convertAndRejectDuplicate(){Lead l=new Lead();l.setName("测试联系人");l.setCompany("测试公司");repo.save(l);Map<String,Object>b=new HashMap<>();b.put("createOpportunity",true);b.put("opportunityName","测试商机");Map<String,Long> r=service.convert(l.getId(),b);Assertions.assertNotNull(r.get("accountId"));Assertions.assertThrows(BizException.class,()->service.convert(l.getId(),b));}}
