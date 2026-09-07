@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -36,6 +37,7 @@ public class CaseController {
     }
 
     @Operation(summary = "分页查询工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
     @GetMapping
     public Result<PageResult<CrmCase>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -52,18 +54,21 @@ public class CaseController {
     }
 
     @Operation(summary = "查询工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
     @GetMapping("/{id}")
     public Result<CrmCase> get(@PathVariable Long id) {
         return Result.ok(caseService.get(id));
     }
 
     @Operation(summary = "新增工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PostMapping
     public Result<CrmCase> add(@RequestBody CrmCase crmCase) {
         return Result.ok(caseService.save(crmCase));
     }
 
     @Operation(summary = "编辑工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}")
     public Result<CrmCase> edit(
             @PathVariable Long id,
@@ -74,6 +79,7 @@ public class CaseController {
     }
 
     @Operation(summary = "删除工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         caseService.delete(id);
@@ -81,6 +87,7 @@ public class CaseController {
     }
 
     @Operation(summary = "变更工单状态")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}/status")
     public Result<CrmCase> changeStatus(
             @PathVariable Long id,
@@ -90,12 +97,14 @@ public class CaseController {
     }
 
     @Operation(summary = "升级工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}/escalate")
     public Result<CrmCase> escalate(@PathVariable Long id) {
         return Result.ok(caseService.escalate(id));
     }
 
     @Operation(summary = "分派工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}/assign")
     public Result<CrmCase> assign(
             @PathVariable Long id,
@@ -105,12 +114,14 @@ public class CaseController {
     }
 
     @Operation(summary = "查询工单评论")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
     @GetMapping("/{id}/comments")
     public Result<List<CaseComment>> comments(@PathVariable Long id) {
         return Result.ok(caseService.comments(id));
     }
 
     @Operation(summary = "新增工单评论")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PostMapping("/{id}/comments")
     public Result<CaseComment> addComment(
             @PathVariable Long id,

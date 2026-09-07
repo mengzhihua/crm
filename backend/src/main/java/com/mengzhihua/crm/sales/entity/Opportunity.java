@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class Opportunity extends BaseEntity {
     private Long accountId;
     private Long contactId;
+    private Long priceBookId;
     private String name;
     private BigDecimal amount;
 

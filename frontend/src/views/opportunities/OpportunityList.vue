@@ -19,7 +19,13 @@
     </div>
     <el-card v-if="view === 'table'">
       <el-table :data="rows">
-        <el-table-column prop="name" label="名称" />
+      <el-table-column label="名称">
+        <template #default="{ row }">
+          <el-link type="primary" @click="$router.push(`/opportunities/${row.id}`)">
+            {{ row.name }}
+          </el-link>
+        </template>
+      </el-table-column>
         <el-table-column prop="amount" label="金额" />
         <el-table-column prop="stage" label="阶段"
           ><template #default="{ row }"

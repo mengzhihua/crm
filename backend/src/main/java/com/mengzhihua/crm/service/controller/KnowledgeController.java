@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "知识库")
 @RestController
@@ -28,6 +29,7 @@ public class KnowledgeController {
     }
 
     @Operation(summary = "搜索知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
     @GetMapping
     public Result<PageResult<KnowledgeArticle>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -39,18 +41,21 @@ public class KnowledgeController {
     }
 
     @Operation(summary = "查看知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
     @GetMapping("/{id}")
     public Result<KnowledgeArticle> get(@PathVariable Long id) {
         return Result.ok(knowledgeService.get(id));
     }
 
     @Operation(summary = "新增知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PostMapping
     public Result<KnowledgeArticle> add(@RequestBody KnowledgeArticle article) {
         return Result.ok(knowledgeService.save(article));
     }
 
     @Operation(summary = "编辑知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}")
     public Result<KnowledgeArticle> edit(
             @PathVariable Long id,
@@ -61,12 +66,14 @@ public class KnowledgeController {
     }
 
     @Operation(summary = "发布知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @PutMapping("/{id}/publish")
     public Result<KnowledgeArticle> publish(@PathVariable Long id) {
         return Result.ok(knowledgeService.publish(id));
     }
 
     @Operation(summary = "删除知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         knowledgeService.delete(id);

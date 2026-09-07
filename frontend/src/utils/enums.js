@@ -46,6 +46,25 @@ export const maps = {
     PUBLISHED: "已发布",
     ARCHIVED: "已归档",
   },
+  quoteStatus: {
+    DRAFT: "草稿",
+    IN_REVIEW: "审批中",
+    APPROVED: "已批准",
+    REJECTED: "已驳回",
+    ACCEPTED: "已接受",
+    EXPIRED: "已过期",
+  },
+  approvalStatus: {
+    PENDING: "待审批",
+    APPROVED: "已通过",
+    REJECTED: "已驳回",
+  },
+  role: {
+    ADMIN: "管理员",
+    SALES_MANAGER: "销售经理",
+    SALES_REP: "销售代表",
+    SERVICE_AGENT: "服务专员",
+  },
 };
 
 export const colors = {
@@ -64,6 +83,15 @@ export const colors = {
   DONE: "success",
   PUBLISHED: "success",
   DRAFT: "warning",
+  IN_REVIEW: "warning",
+  APPROVED: "success",
+  REJECTED: "danger",
+  ACCEPTED: "success",
+  PENDING: "warning",
+  ADMIN: "danger",
+  SALES_MANAGER: "success",
+  SALES_REP: "info",
+  SERVICE_AGENT: "warning",
 };
 
 export const text = (map, value) => map[value] || value || "-";

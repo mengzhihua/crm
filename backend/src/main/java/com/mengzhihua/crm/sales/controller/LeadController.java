@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Map;
 @Validated
 @RestController
 @RequestMapping("/api/leads")
+@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
 public class LeadController {
     private final LeadService leadService;
 

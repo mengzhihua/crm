@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -25,6 +26,7 @@ import java.util.Map;
 @Tag(name = "商机")
 @RestController
 @RequestMapping("/api/opportunities")
+@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
 public class OpportunityController {
     private final OpportunityService opportunityService;
 

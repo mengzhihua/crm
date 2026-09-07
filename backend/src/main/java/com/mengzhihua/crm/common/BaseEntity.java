@@ -1,5 +1,6 @@
 package com.mengzhihua.crm.common;
 
+import com.mengzhihua.crm.auth.CurrentUser;
 import lombok.Getter;
 import lombok.Setter;
 import javax.persistence.GeneratedValue;
@@ -26,7 +27,7 @@ public abstract class BaseEntity {
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
         if (owner == null) {
-            owner = "系统管理员";
+            owner = CurrentUser.usernameOrDefault();
         }
     }
 
