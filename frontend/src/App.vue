@@ -43,8 +43,8 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { maps } from "./utils/enums";
 import { search } from "./api";
 import { canSee, currentUser, menuPermissions } from "./utils/permission";
@@ -71,7 +71,14 @@ const titles = reactive({
 });
 
 const router = useRouter();
+const route = useRoute();
 const user = ref(currentUser());
+watch(
+  () => route.path,
+  () => {
+    user.value = currentUser();
+  },
+);
 const searchText = ref("");
 const menuLabels = {
   "/dashboard": "仪表盘",
