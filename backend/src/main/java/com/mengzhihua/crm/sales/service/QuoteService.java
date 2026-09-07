@@ -5,6 +5,7 @@ import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.SerialNumberGenerator;
+import com.mengzhihua.crm.common.enums.ApprovalTargetType;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.QuoteStatus;
 import com.mengzhihua.crm.sales.dto.LineItemRequest;
@@ -193,7 +194,7 @@ public class QuoteService {
             throw new BizException("当前报价单不可提交审批");
         }
         boolean required = approvalService.submit(
-                com.mengzhihua.crm.common.enums.ApprovalTargetType.QUOTE,
+                ApprovalTargetType.QUOTE,
                 quote.getId(),
                 quote.getTotalAmount(),
                 quote.getDiscountRate(),
