@@ -10,6 +10,7 @@ import com.mengzhihua.crm.sales.repository.ActivityRepository;
 import com.mengzhihua.crm.sales.repository.LeadRepository;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
 import com.mengzhihua.crm.sales.service.OpportunityService;
+import com.mengzhihua.crm.forecast.service.ForecastService;
 import com.mengzhihua.crm.service.entity.CrmCase;
 import com.mengzhihua.crm.service.repository.CrmCaseRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,19 +39,22 @@ public class DashboardController {
     private final CrmCaseRepository caseRepository;
     private final OpportunityService opportunityService;
     private final ActivityRepository activityRepository;
+    private final ForecastService forecastService;
 
     public DashboardController(
             LeadRepository leadRepository,
             OpportunityRepository opportunityRepository,
             CrmCaseRepository caseRepository,
             OpportunityService opportunityService,
-            ActivityRepository activityRepository
+            ActivityRepository activityRepository,
+            ForecastService forecastService
     ) {
         this.leadRepository = leadRepository;
         this.opportunityRepository = opportunityRepository;
         this.caseRepository = caseRepository;
         this.opportunityService = opportunityService;
         this.activityRepository = activityRepository;
+        this.forecastService = forecastService;
     }
 
     @Operation(summary = "查询仪表盘汇总")
@@ -72,6 +76,9 @@ public class DashboardController {
         );
         result.put("openOpportunityAmount", openOpportunityAmount(closedStages));
         result.put("wonAmountThisMonth", wonAmountThisMonth());
+        Map<String, Object> forecast = forecastService.currentSummary();
+        result.put("targetAmount", forecast.get("targetAmount"));
+        result.put("achievementRate", forecast.get("achievementRate"));
         result.put("openCaseCount", caseRepository.countByStatusNotIn(closedCases));
         result.put(
                 "overdueCaseCount",

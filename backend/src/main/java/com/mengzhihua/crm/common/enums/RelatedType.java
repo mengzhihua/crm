@@ -1,5 +1,12 @@
 package com.mengzhihua.crm.common.enums;
 
 public enum RelatedType {
-    LEAD, ACCOUNT, CONTACT, OPPORTUNITY, CASE
+    LEAD,
+    ACCOUNT,
+    CONTACT,
+    OPPORTUNITY,
+    CASE,
+    QUOTE,
+    CONTRACT,
+    KNOWLEDGE
 }

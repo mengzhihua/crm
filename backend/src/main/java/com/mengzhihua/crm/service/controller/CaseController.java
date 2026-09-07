@@ -2,12 +2,16 @@ package com.mengzhihua.crm.service.controller;
 
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.CsvExportService;
 import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
 import com.mengzhihua.crm.service.dto.CaseAssignRequest;
 import com.mengzhihua.crm.service.dto.CaseCommentRequest;
 import com.mengzhihua.crm.service.dto.CaseStatusRequest;
+import com.mengzhihua.crm.service.dto.CaseSurveyRequest;
+import com.mengzhihua.crm.service.entity.CaseArticleLink;
 import com.mengzhihua.crm.service.entity.CaseComment;
+import com.mengzhihua.crm.service.entity.CaseSurvey;
 import com.mengzhihua.crm.service.entity.CrmCase;
 import com.mengzhihua.crm.service.service.CaseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
@@ -128,5 +133,85 @@ public class CaseController {
             @Valid @RequestBody CaseCommentRequest request
     ) {
         return Result.ok(caseService.addComment(id, request));
+    }
+
+    @Operation(summary = "评价工单")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
+    @PostMapping("/{id}/survey")
+    public Result<CaseSurvey> survey(
+            @PathVariable Long id,
+            @Valid @RequestBody CaseSurveyRequest request
+    ) {
+        return Result.ok(caseService.survey(id, request));
+    }
+
+    @Operation(summary = "查询关联知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT','SALES_MANAGER','SALES_REP')")
+    @GetMapping("/{id}/articles")
+    public Result<List<CaseArticleLink>> articles(@PathVariable Long id) {
+        return Result.ok(caseService.articles(id));
+    }
+
+    @Operation(summary = "关联知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
+    @PostMapping("/{id}/articles/{articleId}")
+    public Result<CaseArticleLink> addArticle(
+            @PathVariable Long id,
+            @PathVariable Long articleId
+    ) {
+        return Result.ok(caseService.addArticle(id, articleId));
+    }
+
+    @Operation(summary = "取消关联知识文章")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICE_AGENT')")
+    @DeleteMapping("/{id}/articles/{articleId}")
+    public Result<Void> removeArticle(
+            @PathVariable Long id,
+            @PathVariable Long articleId
+    ) {
+        caseService.removeArticle(id, articleId);
+        return Result.ok();
+    }
+
+    @Operation(summary = "检查工单 SLA")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/check-sla")
+    public Result<Void> checkSla() {
+        caseService.checkSla();
+        return Result.ok();
+    }
+
+    @Operation(summary = "导出工单")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) CaseStatus status,
+            @RequestParam(required = false) CasePriority priority,
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) Boolean overdue
+    ) {
+        List<CrmCase> records = caseService.list(
+                1,
+                10000,
+                keyword,
+                status,
+                priority,
+                accountId,
+                overdue
+        ).getRecords();
+        List<List<?>> rows = records.stream()
+                .map(item -> java.util.Arrays.asList(
+                        item.getCaseNo(),
+                        item.getSubject(),
+                        item.getStatus(),
+                        item.getPriority(),
+                        item.getOwner()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        return CsvExportService.download(
+                "cases.csv",
+                java.util.Arrays.asList("工单号", "主题", "状态", "优先级", "负责人"),
+                rows
+        );
     }
 }

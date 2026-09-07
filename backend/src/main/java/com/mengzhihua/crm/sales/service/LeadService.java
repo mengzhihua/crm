@@ -8,6 +8,11 @@ import com.mengzhihua.crm.common.enums.LeadSource;
 import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.Rating;
+import com.mengzhihua.crm.common.enums.MemberStatus;
+import com.mengzhihua.crm.common.enums.MemberType;
+import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.marketing.repository.CampaignMemberRepository;
+import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.sales.dto.LeadConvertRequest;
 import com.mengzhihua.crm.sales.entity.Account;
 import com.mengzhihua.crm.sales.entity.Contact;
@@ -35,17 +40,23 @@ public class LeadService {
     private final AccountRepository accountRepository;
     private final ContactRepository contactRepository;
     private final OpportunityRepository opportunityRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
+    private final FieldHistoryService fieldHistoryService;
 
     public LeadService(
             LeadRepository leadRepository,
             AccountRepository accountRepository,
             ContactRepository contactRepository,
-            OpportunityRepository opportunityRepository
+            OpportunityRepository opportunityRepository,
+            CampaignMemberRepository campaignMemberRepository,
+            FieldHistoryService fieldHistoryService
     ) {
         this.leadRepository = leadRepository;
         this.accountRepository = accountRepository;
         this.contactRepository = contactRepository;
         this.opportunityRepository = opportunityRepository;
+        this.campaignMemberRepository = campaignMemberRepository;
+        this.fieldHistoryService = fieldHistoryService;
     }
 
     public PageResult<Lead> list(
@@ -136,6 +147,7 @@ public class LeadService {
                             : request.getOpportunityName()
             );
             opportunity.setAmount(request.getAmount());
+            opportunity.setCampaignId(lead.getCampaignId());
             opportunity.setExpectedCloseDate(request.getExpectedCloseDate());
             opportunity.setStage(OpportunityStage.QUALIFICATION);
             opportunity.setProbability(
@@ -150,6 +162,25 @@ public class LeadService {
         lead.setConvertedOpportunityId(opportunityId);
         lead.setConvertedAt(LocalDateTime.now());
         leadRepository.save(lead);
+        fieldHistoryService.record(
+                RelatedType.LEAD,
+                lead.getId(),
+                "status",
+                LeadStatus.NEW,
+                LeadStatus.CONVERTED
+        );
+        if (lead.getCampaignId() != null) {
+            campaignMemberRepository
+                    .findByCampaignIdAndMemberTypeAndMemberId(
+                            lead.getCampaignId(),
+                            MemberType.LEAD,
+                            lead.getId()
+                    )
+                    .ifPresent(member -> {
+                        member.setStatus(MemberStatus.CONVERTED);
+                        campaignMemberRepository.save(member);
+                    });
+        }
 
         Map<String, Long> result = new LinkedHashMap<>();
         result.put("accountId", account.getId());

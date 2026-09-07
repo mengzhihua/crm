@@ -8,6 +8,8 @@ import com.mengzhihua.crm.common.SerialNumberGenerator;
 import com.mengzhihua.crm.common.enums.ApprovalTargetType;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.QuoteStatus;
+import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.sales.dto.LineItemRequest;
 import com.mengzhihua.crm.sales.dto.LineItemsRequest;
 import com.mengzhihua.crm.sales.entity.Opportunity;
@@ -37,19 +39,22 @@ public class QuoteService {
     private final OpportunityRepository opportunityRepository;
     private final OpportunityLineItemRepository opportunityItemRepository;
     private final ApprovalService approvalService;
+    private final FieldHistoryService fieldHistoryService;
 
     public QuoteService(
             QuoteRepository quoteRepository,
             QuoteLineItemRepository lineItemRepository,
             OpportunityRepository opportunityRepository,
             OpportunityLineItemRepository opportunityItemRepository,
-            ApprovalService approvalService
+            ApprovalService approvalService,
+            FieldHistoryService fieldHistoryService
     ) {
         this.quoteRepository = quoteRepository;
         this.lineItemRepository = lineItemRepository;
         this.opportunityRepository = opportunityRepository;
         this.opportunityItemRepository = opportunityItemRepository;
         this.approvalService = approvalService;
+        this.fieldHistoryService = fieldHistoryService;
     }
 
     public PageResult<Quote> list(
@@ -189,6 +194,7 @@ public class QuoteService {
     @Transactional
     public Quote submit(Long id) {
         Quote quote = get(id);
+        QuoteStatus oldStatus = quote.getStatus();
         if (quote.getStatus() != QuoteStatus.DRAFT
                 && quote.getStatus() != QuoteStatus.REJECTED) {
             throw new BizException("当前报价单不可提交审批");
@@ -201,12 +207,21 @@ public class QuoteService {
                 quote.getName()
         );
         quote.setStatus(required ? QuoteStatus.IN_REVIEW : QuoteStatus.APPROVED);
-        return quoteRepository.save(quote);
+        Quote saved = quoteRepository.save(quote);
+        fieldHistoryService.record(
+                RelatedType.QUOTE,
+                id,
+                "status",
+                oldStatus,
+                saved.getStatus()
+        );
+        return saved;
     }
 
     @Transactional
     public Quote accept(Long id) {
         Quote quote = get(id);
+        QuoteStatus oldStatus = quote.getStatus();
         if (quote.getStatus() != QuoteStatus.APPROVED) {
             throw new BizException("只有已批准报价单可以接受");
         }
@@ -232,7 +247,15 @@ public class QuoteService {
             );
         }
         opportunityRepository.save(opportunity);
-        return quoteRepository.save(quote);
+        Quote saved = quoteRepository.save(quote);
+        fieldHistoryService.record(
+                RelatedType.QUOTE,
+                id,
+                "status",
+                oldStatus,
+                saved.getStatus()
+        );
+        return saved;
     }
 
     private String nextNo() {

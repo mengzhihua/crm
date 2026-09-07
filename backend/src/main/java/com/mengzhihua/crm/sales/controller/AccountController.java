@@ -2,6 +2,7 @@ package com.mengzhihua.crm.sales.controller;
 
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.CsvExportService;
 import com.mengzhihua.crm.sales.entity.Account;
 import com.mengzhihua.crm.sales.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.util.List;
 
 @Tag(name = "客户")
 @RestController
@@ -76,5 +80,31 @@ public class AccountController {
     public Result<Void> delete(@PathVariable Long id) {
         accountService.delete(id);
         return Result.ok();
+    }
+
+    @Operation(summary = "导出客户")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String keyword
+    ) {
+        List<Account> records = accountService.list(
+                1,
+                10000,
+                keyword
+        ).getRecords();
+        List<List<?>> rows = records.stream()
+                .map(item -> java.util.Arrays.asList(
+                        item.getId(),
+                        item.getName(),
+                        item.getIndustry(),
+                        item.getPhone(),
+                        item.getOwner()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        return CsvExportService.download(
+                "accounts.csv",
+                java.util.Arrays.asList("ID", "名称", "行业", "电话", "负责人"),
+                rows
+        );
     }
 }

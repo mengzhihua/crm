@@ -40,6 +40,9 @@
         <el-button v-if="quote.status === 'APPROVED'" type="success" @click="accept">
           接受报价
         </el-button>
+        <el-button v-if="quote.status === 'ACCEPTED'" type="success" @click="createContract">
+          生成合同
+        </el-button>
       </div>
     </div>
     <el-table :data="items">
@@ -72,6 +75,11 @@
       </el-table-column>
       <el-table-column prop="totalPrice" label="小计" />
     </el-table>
+    <RecordTimeline
+      class="top-gap"
+      target-type="QUOTE"
+      :target-id="route.params.id"
+    />
   </section>
 </template>
 
@@ -79,8 +87,9 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { products as productApi, quotes as quoteApi } from "../../api";
+import { contracts, products as productApi, quotes as quoteApi } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import RecordTimeline from "../../components/RecordTimeline.vue";
 
 const route = useRoute();
 const quote = reactive({});
@@ -112,6 +121,11 @@ const submit = async () => {
 const accept = async () => {
   Object.assign(quote, await quoteApi.accept(route.params.id));
   ElMessage.success("报价单已接受");
+};
+const createContract = async () => {
+  const contract = await contracts.fromQuote(route.params.id);
+  ElMessage.success("合同已生成");
+  window.location.href = `/contracts/${contract.id}`;
 };
 onMounted(load);
 </script>

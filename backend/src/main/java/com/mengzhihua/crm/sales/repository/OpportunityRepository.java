@@ -17,4 +17,6 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long>,
     long countByStageNotIn(Collection<OpportunityStage> stages);
 
     List<Opportunity> findByStageNotIn(Collection<OpportunityStage> stages);
+
+    List<Opportunity> findByCampaignId(Long campaignId);
 }

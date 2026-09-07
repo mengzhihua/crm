@@ -23,6 +23,7 @@ public class Lead extends BaseEntity {
     private String phone;
     private String email;
     private String industry;
+    private Long campaignId;
 
     @Enumerated(EnumType.STRING)
     private LeadSource source;

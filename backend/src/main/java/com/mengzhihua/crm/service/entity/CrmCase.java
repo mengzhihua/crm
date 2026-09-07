@@ -44,7 +44,10 @@ public class CrmCase extends BaseEntity {
     private CaseOrigin origin;
 
     private LocalDateTime slaDueAt;
+    private LocalDateTime responseDueAt;
+    private LocalDateTime firstResponseAt;
     private Boolean escalated;
+    private Integer satisfactionScore;
 
     @Column(length = 3000)
     private String solution;

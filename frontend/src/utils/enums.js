@@ -65,6 +65,39 @@ export const maps = {
     SALES_REP: "销售代表",
     SERVICE_AGENT: "服务专员",
   },
+  campaignType: {
+    EMAIL: "邮件",
+    EVENT: "活动",
+    WEBINAR: "网络研讨会",
+    ADS: "广告",
+    REFERRAL: "转介绍",
+    OTHER: "其他",
+  },
+  campaignStatus: {
+    PLANNED: "计划中",
+    IN_PROGRESS: "进行中",
+    COMPLETED: "已完成",
+    ABORTED: "已中止",
+  },
+  contractStatus: {
+    DRAFT: "草稿",
+    PENDING_SIGN: "待签署",
+    ACTIVE: "生效中",
+    EXPIRED: "已过期",
+    TERMINATED: "已终止",
+  },
+  paymentStatus: {
+    UNPAID: "未回款",
+    PARTIAL: "部分回款",
+    PAID: "已回款",
+    OVERDUE: "已逾期",
+  },
+  paymentMethod: {
+    BANK_TRANSFER: "银行转账",
+    CASH: "现金",
+    CHECK: "支票",
+    ONLINE: "线上支付",
+  },
 };
 
 export const colors = {
@@ -92,6 +125,17 @@ export const colors = {
   SALES_MANAGER: "success",
   SALES_REP: "info",
   SERVICE_AGENT: "warning",
+  IN_PROGRESS: "warning",
+  COMPLETED: "success",
+  ABORTED: "danger",
+  PENDING_SIGN: "warning",
+  ACTIVE: "success",
+  EXPIRED: "info",
+  TERMINATED: "danger",
+  UNPAID: "info",
+  PARTIAL: "warning",
+  PAID: "success",
+  OVERDUE: "danger",
 };
 
 export const text = (map, value) => map[value] || value || "-";

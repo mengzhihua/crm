@@ -19,6 +19,7 @@
       /></el-select>
       <el-checkbox v-model="overdue">仅超期</el-checkbox>
       <el-button type="primary" @click="load">查询</el-button>
+      <el-button @click="exportFile">导出</el-button>
       <el-button type="success" @click="open()">新增工单</el-button>
     </div>
     <el-card>
@@ -102,7 +103,7 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { cases } from "../../api";
+import { cases, exportCsv } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
 
 const rows = ref([]);
@@ -132,6 +133,21 @@ const load = async () => {
   });
   rows.value = data.records;
   total.value = data.total;
+};
+
+const exportFile = async () => {
+  const blob = await exportCsv("/cases", {
+    keyword: keyword.value,
+    status: status.value,
+    priority: priority.value,
+    overdue: overdue.value || undefined,
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "cases.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 };
 const remaining = (value) => {
   if (!value) return "-";

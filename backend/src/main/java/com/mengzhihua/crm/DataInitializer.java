@@ -8,14 +8,24 @@ import com.mengzhihua.crm.common.enums.AccountLevel;
 import com.mengzhihua.crm.common.enums.AccountType;
 import com.mengzhihua.crm.common.enums.ApprovalTargetType;
 import com.mengzhihua.crm.common.enums.ArticleStatus;
+import com.mengzhihua.crm.common.enums.CampaignStatus;
+import com.mengzhihua.crm.common.enums.CampaignType;
 import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
 import com.mengzhihua.crm.common.enums.CaseType;
+import com.mengzhihua.crm.common.enums.MemberStatus;
+import com.mengzhihua.crm.common.enums.MemberType;
 import com.mengzhihua.crm.common.enums.LeadSource;
 import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.Rating;
 import com.mengzhihua.crm.common.enums.Role;
+import com.mengzhihua.crm.marketing.entity.Campaign;
+import com.mengzhihua.crm.marketing.entity.CampaignMember;
+import com.mengzhihua.crm.marketing.repository.CampaignMemberRepository;
+import com.mengzhihua.crm.marketing.repository.CampaignRepository;
+import com.mengzhihua.crm.forecast.entity.SalesTarget;
+import com.mengzhihua.crm.forecast.repository.SalesTargetRepository;
 import com.mengzhihua.crm.sales.entity.Account;
 import com.mengzhihua.crm.sales.entity.Lead;
 import com.mengzhihua.crm.sales.entity.Opportunity;
@@ -30,6 +40,10 @@ import com.mengzhihua.crm.sales.repository.PriceBookRepository;
 import com.mengzhihua.crm.sales.repository.ProductRepository;
 import com.mengzhihua.crm.service.entity.CrmCase;
 import com.mengzhihua.crm.service.entity.KnowledgeArticle;
+import com.mengzhihua.crm.service.entity.AssignmentRule;
+import com.mengzhihua.crm.service.entity.SlaPolicy;
+import com.mengzhihua.crm.service.repository.AssignmentRuleRepository;
+import com.mengzhihua.crm.service.repository.SlaPolicyRepository;
 import com.mengzhihua.crm.service.service.CaseService;
 import com.mengzhihua.crm.service.service.KnowledgeService;
 import org.springframework.boot.CommandLineRunner;
@@ -55,6 +69,11 @@ public class DataInitializer implements CommandLineRunner {
     private final PriceBookRepository priceBookRepository;
     private final PriceBookEntryRepository priceBookEntryRepository;
     private final ApprovalRuleRepository approvalRuleRepository;
+    private final CampaignRepository campaignRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
+    private final SalesTargetRepository salesTargetRepository;
+    private final SlaPolicyRepository slaPolicyRepository;
+    private final AssignmentRuleRepository assignmentRuleRepository;
 
     public DataInitializer(
             AccountRepository accountRepository,
@@ -67,7 +86,12 @@ public class DataInitializer implements CommandLineRunner {
             ProductRepository productRepository,
             PriceBookRepository priceBookRepository,
             PriceBookEntryRepository priceBookEntryRepository,
-            ApprovalRuleRepository approvalRuleRepository
+            ApprovalRuleRepository approvalRuleRepository,
+            CampaignRepository campaignRepository,
+            CampaignMemberRepository campaignMemberRepository,
+            SalesTargetRepository salesTargetRepository,
+            SlaPolicyRepository slaPolicyRepository,
+            AssignmentRuleRepository assignmentRuleRepository
     ) {
         this.accountRepository = accountRepository;
         this.leadRepository = leadRepository;
@@ -80,6 +104,11 @@ public class DataInitializer implements CommandLineRunner {
         this.priceBookRepository = priceBookRepository;
         this.priceBookEntryRepository = priceBookEntryRepository;
         this.approvalRuleRepository = approvalRuleRepository;
+        this.campaignRepository = campaignRepository;
+        this.campaignMemberRepository = campaignMemberRepository;
+        this.salesTargetRepository = salesTargetRepository;
+        this.slaPolicyRepository = slaPolicyRepository;
+        this.assignmentRuleRepository = assignmentRuleRepository;
     }
 
     @Override
@@ -95,6 +124,7 @@ public class DataInitializer implements CommandLineRunner {
         createOpportunities();
         createCases();
         createKnowledge();
+        createPhase3Data();
     }
 
     private void createUsers() {
@@ -279,5 +309,99 @@ public class DataInitializer implements CommandLineRunner {
             article.setOwner("service");
             knowledgeService.save(article);
         }
+    }
+
+    private void createPhase3Data() {
+        createServicePolicies();
+        createSalesTargets();
+        if (campaignRepository.count() > 0) {
+            return;
+        }
+        Campaign campaign = new Campaign();
+        campaign.setName("春季客户增长活动");
+        campaign.setType(CampaignType.EVENT);
+        campaign.setStatus(CampaignStatus.IN_PROGRESS);
+        campaign.setStartDate(LocalDate.now().minusDays(5));
+        campaign.setEndDate(LocalDate.now().plusDays(25));
+        campaign.setBudgetCost(new BigDecimal("10000"));
+        campaign.setActualCost(new BigDecimal("3800"));
+        campaign.setExpectedRevenue(new BigDecimal("80000"));
+        campaign.setOwner("manager");
+        campaign = campaignRepository.save(campaign);
+        Lead lead = leadRepository.findAll().stream().findFirst().orElse(null);
+        if (lead != null) {
+            lead.setCampaignId(campaign.getId());
+            leadRepository.save(lead);
+            CampaignMember member = new CampaignMember();
+            member.setCampaignId(campaign.getId());
+            member.setMemberId(lead.getId());
+            member.setMemberType(MemberType.LEAD);
+            member.setStatus(MemberStatus.SENT);
+            campaignMemberRepository.save(member);
+        }
+        Opportunity opportunity = opportunityRepository.findAll()
+                .stream()
+                .findFirst()
+                .orElse(null);
+        if (opportunity != null) {
+            opportunity.setCampaignId(campaign.getId());
+            opportunityRepository.save(opportunity);
+        }
+    }
+
+    private void createServicePolicies() {
+        if (slaPolicyRepository.count() == 0) {
+            createSla(CasePriority.URGENT, 1, 4);
+            createSla(CasePriority.HIGH, 2, 8);
+            createSla(CasePriority.MEDIUM, 4, 24);
+            createSla(CasePriority.LOW, 12, 72);
+        }
+        if (assignmentRuleRepository.count() == 0) {
+            AssignmentRule rule = new AssignmentRule();
+            rule.setName("默认服务专员");
+            rule.setPriority(1);
+            rule.setAssignTo("service");
+            rule.setActive(true);
+            rule.setOwner("admin");
+            assignmentRuleRepository.save(rule);
+        }
+    }
+
+    private void createSla(
+            CasePriority priority,
+            int responseHours,
+            int resolveHours
+    ) {
+        SlaPolicy policy = new SlaPolicy();
+        policy.setPriority(priority);
+        policy.setResponseHours(responseHours);
+        policy.setResolveHours(resolveHours);
+        policy.setActive(true);
+        policy.setOwner("admin");
+        slaPolicyRepository.save(policy);
+    }
+
+    private void createSalesTargets() {
+        if (salesTargetRepository.count() > 0) {
+            return;
+        }
+        int year = LocalDate.now().getYear();
+        int month = LocalDate.now().getMonthValue();
+        createTarget("sales", year, month, new BigDecimal("200000"));
+        createTarget("manager", year, month, new BigDecimal("500000"));
+    }
+
+    private void createTarget(
+            String owner,
+            int year,
+            int month,
+            BigDecimal amount
+    ) {
+        SalesTarget target = new SalesTarget();
+        target.setOwner(owner);
+        target.setYear(year);
+        target.setMonth(month);
+        target.setTargetAmount(amount);
+        salesTargetRepository.save(target);
     }
 }

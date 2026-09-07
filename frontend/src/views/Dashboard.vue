@@ -7,6 +7,11 @@
         <div class="num">{{ metric.value }}</div>
       </el-card>
     </div>
+    <el-card class="service-summary">
+      <template #header>服务指标</template>
+      <span>平均满意度：{{ serviceSummary.averageSatisfactionScore || 0 }}</span>
+      <span>SLA达成率：{{ serviceSummary.slaAchievementRate || 0 }}%</span>
+    </el-card>
     <div class="charts">
       <el-card>
         <template #header>商机管道</template>
@@ -39,11 +44,12 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-import { dashboard } from "../api";
+import { dashboard, serviceDashboard } from "../api";
 import { maps, text } from "../utils/enums";
 
 const metrics = ref([]);
 const recent = ref([]);
+const serviceSummary = ref({});
 const pipelineEl = ref();
 const sourceEl = ref();
 const caseEl = ref();
@@ -107,6 +113,7 @@ const resize = () => charts.forEach((instance) => instance.resize());
 
 onMounted(async () => {
   const data = await dashboard.summary();
+  serviceSummary.value = await serviceDashboard();
   metrics.value = [
     { label: "新增线索", value: data.newLeadCount || 0 },
     { label: "进行中商机", value: data.openOpportunityCount || 0 },

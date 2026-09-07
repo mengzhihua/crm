@@ -12,6 +12,11 @@ export const menuPermissions = {
   "/quotes": ["ADMIN", "SALES_MANAGER", "SALES_REP"],
   "/approvals": ["ADMIN", "SALES_MANAGER"],
   "/users": ["ADMIN"],
+  "/campaigns": ["ADMIN", "SALES_MANAGER", "SALES_REP"],
+  "/contracts": ["ADMIN", "SALES_MANAGER", "SALES_REP"],
+  "/forecast": ["ADMIN", "SALES_MANAGER", "SALES_REP"],
+  "/sales-targets": ["ADMIN", "SALES_MANAGER"],
+  "/settings": ["ADMIN"],
 };
 
 export const canSee = (path, role) =>

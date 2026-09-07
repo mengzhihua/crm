@@ -4,6 +4,8 @@ import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
+import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.sales.dto.OpportunityStageRequest;
 import com.mengzhihua.crm.sales.entity.Opportunity;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
@@ -23,9 +25,14 @@ import java.util.Objects;
 @Service
 public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
+    private final FieldHistoryService fieldHistoryService;
 
-    public OpportunityService(OpportunityRepository opportunityRepository) {
+    public OpportunityService(
+            OpportunityRepository opportunityRepository,
+            FieldHistoryService fieldHistoryService
+    ) {
         this.opportunityRepository = opportunityRepository;
+        this.fieldHistoryService = fieldHistoryService;
     }
 
     public PageResult<Opportunity> list(
@@ -81,6 +88,8 @@ public class OpportunityService {
 
     public Opportunity changeStage(Long id, OpportunityStageRequest request) {
         Opportunity opportunity = get(id);
+        OpportunityStage oldStage = opportunity.getStage();
+        BigDecimal oldAmount = opportunity.getAmount();
         if (request.getStage() == OpportunityStage.CLOSED_LOST
                 && (request.getLostReason() == null
                 || request.getLostReason().trim().isEmpty())) {
@@ -99,7 +108,22 @@ public class OpportunityService {
                 || request.getStage() == OpportunityStage.CLOSED_LOST) {
             opportunity.setClosedAt(LocalDateTime.now());
         }
-        return opportunityRepository.save(opportunity);
+        Opportunity saved = opportunityRepository.save(opportunity);
+        fieldHistoryService.record(
+                RelatedType.OPPORTUNITY,
+                id,
+                "stage",
+                oldStage,
+                saved.getStage()
+        );
+        fieldHistoryService.record(
+                RelatedType.OPPORTUNITY,
+                id,
+                "amount",
+                oldAmount,
+                saved.getAmount()
+        );
+        return saved;
     }
 
     public List<Map<String, Object>> pipeline() {

@@ -12,6 +12,7 @@
         />
       </el-select>
       <el-button type="primary" @click="load">查询</el-button>
+      <el-button @click="exportFile">导出</el-button>
       <el-button type="success" @click="open()">新增线索</el-button>
     </div>
     <el-card>
@@ -106,7 +107,7 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { leads } from "../../api";
+import { exportCsv, leads } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
 
 const rows = ref([]);
@@ -132,6 +133,19 @@ const load = async () => {
   });
   rows.value = data.records;
   total.value = data.total;
+};
+
+const exportFile = async () => {
+  const blob = await exportCsv("/leads", {
+    keyword: filters.keyword,
+    status: filters.status,
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "leads.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 const open = (row) => {

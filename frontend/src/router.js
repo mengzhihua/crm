@@ -62,6 +62,22 @@ const routes = [
     path: "/opportunities/:id",
     component: () => import("./views/opportunities/OpportunityDetail.vue"),
   },
+  { path: "/campaigns", component: () => import("./views/campaigns/CampaignList.vue") },
+  {
+    path: "/campaigns/:id",
+    component: () => import("./views/campaigns/CampaignDetail.vue"),
+  },
+  { path: "/contracts", component: () => import("./views/contracts/ContractList.vue") },
+  {
+    path: "/contracts/:id",
+    component: () => import("./views/contracts/ContractDetail.vue"),
+  },
+  { path: "/forecast", component: () => import("./views/forecast/Forecast.vue") },
+  {
+    path: "/sales-targets",
+    component: () => import("./views/forecast/SalesTargetList.vue"),
+  },
+  { path: "/settings", component: () => import("./views/settings/ServiceSettings.vue") },
 ];
 
 const router = createRouter({
