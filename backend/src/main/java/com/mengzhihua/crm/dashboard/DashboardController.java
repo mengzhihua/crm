@@ -1,3 +1,142 @@
 package com.mengzhihua.crm.dashboard;
-import com.mengzhihua.crm.common.*;import com.mengzhihua.crm.common.Enums.*;import com.mengzhihua.crm.sales.entity.*;import com.mengzhihua.crm.sales.repository.*;import com.mengzhihua.crm.sales.service.OpportunityService;import com.mengzhihua.crm.service.repository.CrmCaseRepository;import org.springframework.web.bind.annotation.*;import java.math.*;import java.time.*;import java.util.*;
-@RestController@RequestMapping("/api/dashboard")public class DashboardController{private final LeadRepository leads;private final OpportunityRepository opps;private final CrmCaseRepository cases;private final OpportunityService pipeline;private final ActivityRepository activities;public DashboardController(LeadRepository l,OpportunityRepository o,CrmCaseRepository c,OpportunityService p,ActivityRepository a){leads=l;opps=o;cases=c;pipeline=p;activities=a;}@GetMapping("/summary")public Result<Map<String,Object>> summary(){Map<String,Object> m=new LinkedHashMap<>();m.put("newLeadCount",leads.countByStatus(LeadStatus.NEW));m.put("openOpportunityCount",opps.countByStageNotIn(Arrays.asList(OpportunityStage.CLOSED_WON,OpportunityStage.CLOSED_LOST)));m.put("openOpportunityAmount",opps.findByStageNotIn(Arrays.asList(OpportunityStage.CLOSED_WON,OpportunityStage.CLOSED_LOST)).stream().map(Opportunity::getAmount).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add));m.put("wonAmountThisMonth",opps.findByStage(OpportunityStage.CLOSED_WON).stream().filter(x->x.getClosedAt()!=null&&x.getClosedAt().getMonth()==LocalDate.now().getMonth()&&x.getClosedAt().getYear()==LocalDate.now().getYear()).map(Opportunity::getAmount).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add));List<CaseStatus> closed=Arrays.asList(CaseStatus.RESOLVED,CaseStatus.CLOSED);m.put("openCaseCount",cases.countByStatusNotIn(closed));m.put("overdueCaseCount",cases.countBySlaDueAtBeforeAndStatusNotIn(LocalDateTime.now(),closed));m.put("pipeline",pipeline.pipeline());m.put("leadBySource",groupLead());m.put("caseByStatus",groupCase("status"));m.put("caseByPriority",groupCase("priority"));m.put("recentActivities",activities.findTop10ByOrderByDueTimeDesc());return Result.ok(m);}private Map<String,Long> groupLead(){Map<String,Long>m=new LinkedHashMap<>();for(Lead x:leads.findAll())m.put(String.valueOf(x.getSource()),m.getOrDefault(String.valueOf(x.getSource()),0L)+1);return m;}private Map<String,Long> groupCase(String f){Map<String,Long>m=new LinkedHashMap<>();for(com.mengzhihua.crm.service.entity.CrmCase x:cases.findAll()){String k=String.valueOf("status".equals(f)?x.getStatus():x.getPriority());m.put(k,m.getOrDefault(k,0L)+1);}return m;}}
+
+import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.enums.CaseStatus;
+import com.mengzhihua.crm.common.enums.LeadStatus;
+import com.mengzhihua.crm.common.enums.OpportunityStage;
+import com.mengzhihua.crm.sales.entity.Lead;
+import com.mengzhihua.crm.sales.entity.Opportunity;
+import com.mengzhihua.crm.sales.repository.ActivityRepository;
+import com.mengzhihua.crm.sales.repository.LeadRepository;
+import com.mengzhihua.crm.sales.repository.OpportunityRepository;
+import com.mengzhihua.crm.sales.service.OpportunityService;
+import com.mengzhihua.crm.service.entity.CrmCase;
+import com.mengzhihua.crm.service.repository.CrmCaseRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+@Tag(name = "仪表盘")
+@RestController
+@RequestMapping("/api/dashboard")
+public class DashboardController {
+    private final LeadRepository leadRepository;
+    private final OpportunityRepository opportunityRepository;
+    private final CrmCaseRepository caseRepository;
+    private final OpportunityService opportunityService;
+    private final ActivityRepository activityRepository;
+
+    public DashboardController(
+            LeadRepository leadRepository,
+            OpportunityRepository opportunityRepository,
+            CrmCaseRepository caseRepository,
+            OpportunityService opportunityService,
+            ActivityRepository activityRepository
+    ) {
+        this.leadRepository = leadRepository;
+        this.opportunityRepository = opportunityRepository;
+        this.caseRepository = caseRepository;
+        this.opportunityService = opportunityService;
+        this.activityRepository = activityRepository;
+    }
+
+    @Operation(summary = "查询仪表盘汇总")
+    @GetMapping("/summary")
+    public Result<Map<String, Object>> summary() {
+        List<OpportunityStage> closedStages = Arrays.asList(
+                OpportunityStage.CLOSED_WON,
+                OpportunityStage.CLOSED_LOST
+        );
+        List<CaseStatus> closedCases = Arrays.asList(
+                CaseStatus.RESOLVED,
+                CaseStatus.CLOSED
+        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("newLeadCount", leadRepository.countByStatus(LeadStatus.NEW));
+        result.put(
+                "openOpportunityCount",
+                opportunityRepository.countByStageNotIn(closedStages)
+        );
+        result.put("openOpportunityAmount", openOpportunityAmount(closedStages));
+        result.put("wonAmountThisMonth", wonAmountThisMonth());
+        result.put("openCaseCount", caseRepository.countByStatusNotIn(closedCases));
+        result.put(
+                "overdueCaseCount",
+                caseRepository.countBySlaDueAtBeforeAndStatusNotIn(
+                        LocalDateTime.now(),
+                        closedCases
+                )
+        );
+        result.put("pipeline", opportunityService.pipeline());
+        result.put("leadBySource", leadBySource());
+        result.put("caseByStatus", caseByStatus());
+        result.put("caseByPriority", caseByPriority());
+        result.put(
+                "recentActivities",
+                activityRepository.findTop10ByOrderByDueTimeDesc()
+        );
+        return Result.ok(result);
+    }
+
+    private BigDecimal openOpportunityAmount(
+            List<OpportunityStage> closedStages
+    ) {
+        return opportunityRepository.findByStageNotIn(closedStages).stream()
+                .map(Opportunity::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal wonAmountThisMonth() {
+        return opportunityRepository.findByStage(OpportunityStage.CLOSED_WON)
+                .stream()
+                .filter(this::closedThisMonth)
+                .map(Opportunity::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private boolean closedThisMonth(Opportunity opportunity) {
+        return opportunity.getClosedAt() != null
+                && opportunity.getClosedAt().getMonth() == LocalDate.now().getMonth()
+                && opportunity.getClosedAt().getYear() == LocalDate.now().getYear();
+    }
+
+    private Map<String, Long> leadBySource() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Lead lead : leadRepository.findAll()) {
+            String key = String.valueOf(lead.getSource());
+            result.put(key, result.getOrDefault(key, 0L) + 1);
+        }
+        return result;
+    }
+
+    private Map<String, Long> caseByStatus() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (CrmCase crmCase : caseRepository.findAll()) {
+            String key = String.valueOf(crmCase.getStatus());
+            result.put(key, result.getOrDefault(key, 0L) + 1);
+        }
+        return result;
+    }
+
+    private Map<String, Long> caseByPriority() {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (CrmCase crmCase : caseRepository.findAll()) {
+            String key = String.valueOf(crmCase.getPriority());
+            result.put(key, result.getOrDefault(key, 0L) + 1);
+        }
+        return result;
+    }
+}

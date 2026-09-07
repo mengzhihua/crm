@@ -1,4 +1,55 @@
 package com.mengzhihua.crm;
-import com.mengzhihua.crm.common.*;import com.mengzhihua.crm.sales.entity.*;import com.mengzhihua.crm.sales.repository.*;import com.mengzhihua.crm.sales.service.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.test.context.ActiveProfiles;import java.util.*;
-@SpringBootTest @ActiveProfiles("test") class OpportunityServiceTest { @Autowired OpportunityService service; @Autowired OpportunityRepository repo;
- @Test void defaultProbabilityAndLostReason(){Opportunity o=new Opportunity();o.setName("测试");o=service.save(o);Long id=o.getId();Assertions.assertEquals(10,o.getProbability());Map<String,Object>b=new HashMap<>();b.put("stage","CLOSED_LOST");Assertions.assertThrows(BizException.class,()->service.stage(id,b));b.put("lostReason","预算不足");o=service.stage(id,b);Assertions.assertEquals(Enums.OpportunityStage.CLOSED_LOST,o.getStage());}}
+
+import com.mengzhihua.crm.common.BizException;
+import com.mengzhihua.crm.common.enums.OpportunityStage;
+import com.mengzhihua.crm.sales.dto.OpportunityStageRequest;
+import com.mengzhihua.crm.sales.entity.Opportunity;
+import com.mengzhihua.crm.sales.repository.OpportunityRepository;
+import com.mengzhihua.crm.sales.service.OpportunityService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class OpportunityServiceTest {
+    @Autowired
+    private OpportunityRepository opportunityRepository;
+
+    @Autowired
+    private OpportunityService opportunityService;
+
+    @BeforeEach
+    void setUp() {
+        opportunityRepository.deleteAll();
+    }
+
+    @Test
+    void usesStageDefaultProbability() {
+        Opportunity opportunity = new Opportunity();
+        Opportunity saved = opportunityService.save(opportunity);
+
+        assertEquals(
+                OpportunityStage.QUALIFICATION.getDefaultProbability(),
+                saved.getProbability()
+        );
+    }
+
+    @Test
+    void requiresLostReason() {
+        Opportunity opportunity = opportunityService.save(new Opportunity());
+        Long opportunityId = opportunity.getId();
+        OpportunityStageRequest request = new OpportunityStageRequest();
+        request.setStage(OpportunityStage.CLOSED_LOST);
+
+        assertThrows(
+                BizException.class,
+                () -> opportunityService.changeStage(opportunityId, request)
+        );
+    }
+}
