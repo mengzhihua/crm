@@ -4,6 +4,7 @@
     <div class="toolbar">
       <el-input v-model="keyword" placeholder="客户名称" clearable />
       <el-button type="primary" @click="load">查询</el-button>
+      <el-button @click="exportFile">导出</el-button>
       <el-button type="success" @click="open()">新增客户</el-button>
     </div>
     <el-card>
@@ -67,7 +68,7 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { accounts } from "../../api";
+import { accounts, exportCsv } from "../../api";
 
 const rows = ref([]);
 const total = ref(0);
@@ -90,6 +91,16 @@ const load = async () => {
   });
   rows.value = data.records;
   total.value = data.total;
+};
+
+const exportFile = async () => {
+  const blob = await exportCsv("/accounts", { keyword: keyword.value });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "accounts.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 const open = (row) => {

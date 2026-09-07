@@ -2,6 +2,7 @@ package com.mengzhihua.crm.sales.controller;
 
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.CsvExportService;
 import com.mengzhihua.crm.common.enums.LeadSource;
 import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.sales.dto.LeadConvertRequest;
@@ -19,9 +20,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "线索")
@@ -81,5 +84,35 @@ public class LeadController {
             @Valid @RequestBody LeadConvertRequest request
     ) {
         return Result.ok(leadService.convert(id, request));
+    }
+
+    @Operation(summary = "导出线索")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) LeadStatus status,
+            @RequestParam(required = false) LeadSource source
+    ) {
+        List<Lead> records = leadService.list(
+                1,
+                10000,
+                keyword,
+                status,
+                source
+        ).getRecords();
+        List<List<?>> rows = records.stream()
+                .map(item -> java.util.Arrays.asList(
+                        item.getId(),
+                        item.getName(),
+                        item.getCompany(),
+                        item.getStatus(),
+                        item.getOwner()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        return CsvExportService.download(
+                "leads.csv",
+                java.util.Arrays.asList("ID", "姓名", "公司", "状态", "负责人"),
+                rows
+        );
     }
 }

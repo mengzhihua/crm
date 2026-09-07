@@ -2,6 +2,7 @@ package com.mengzhihua.crm.sales.controller;
 
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.CsvExportService;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.sales.dto.OpportunityStageRequest;
 import com.mengzhihua.crm.sales.entity.Opportunity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import javax.validation.Valid;
@@ -90,5 +92,35 @@ public class OpportunityController {
     public Result<Void> delete(@PathVariable Long id) {
         opportunityService.delete(id);
         return Result.ok();
+    }
+
+    @Operation(summary = "导出商机")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) OpportunityStage stage
+    ) {
+        List<Opportunity> records = opportunityService.list(
+                1,
+                10000,
+                keyword,
+                accountId,
+                stage
+        ).getRecords();
+        List<List<?>> rows = records.stream()
+                .map(item -> java.util.Arrays.asList(
+                        item.getId(),
+                        item.getName(),
+                        item.getAmount(),
+                        item.getStage(),
+                        item.getOwner()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        return CsvExportService.download(
+                "opportunities.csv",
+                java.util.Arrays.asList("ID", "名称", "金额", "阶段", "负责人"),
+                rows
+        );
     }
 }

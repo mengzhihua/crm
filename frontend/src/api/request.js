@@ -17,6 +17,12 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
+    if (
+      response.config.responseType === "blob"
+      || response.headers["content-type"]?.includes("text/csv")
+    ) {
+      return response.data;
+    }
     if (response.data?.code !== 0) {
       const message = response.data?.message || "请求失败";
       ElMessage.error(message);

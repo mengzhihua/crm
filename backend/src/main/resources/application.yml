@@ -21,6 +21,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 crm:
+  upload-dir: ./data/uploads
   jwt:
     secret: "crm-phase2-secret-key-change-in-production-2026"
     expire-hours: 12

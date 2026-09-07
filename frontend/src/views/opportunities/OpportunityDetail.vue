@@ -85,6 +85,9 @@
       <el-tab-pane label="活动" name="activities">
         <el-empty description="请在活动模块查看关联活动" />
       </el-tab-pane>
+      <el-tab-pane label="动态" name="timeline">
+        <RecordTimeline target-type="OPPORTUNITY" :target-id="route.params.id" />
+      </el-tab-pane>
     </el-tabs>
   </section>
 </template>
@@ -100,6 +103,7 @@ import {
   quotes as quoteApi,
 } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import RecordTimeline from "../../components/RecordTimeline.vue";
 
 const route = useRoute();
 const router = useRouter();

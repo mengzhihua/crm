@@ -22,6 +22,14 @@
     <el-container>
       <el-header>
         <span>{{ titles[$route.path] || "CRM 管理平台" }}</span>
+        <el-autocomplete
+          v-model="searchText"
+          :fetch-suggestions="searchSuggestions"
+          placeholder="全局搜索"
+          clearable
+          class="global-search"
+          @select="openSearch"
+        />
         <span class="user">
           {{ user?.displayName || user?.username }}（{{ roleText(user?.role) }}）
           <el-button link type="primary" @click="logout">退出</el-button>
@@ -38,6 +46,7 @@
 import { computed, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { maps } from "./utils/enums";
+import { search } from "./api";
 import { canSee, currentUser, menuPermissions } from "./utils/permission";
 
 const titles = reactive({
@@ -54,10 +63,16 @@ const titles = reactive({
   "/quotes": "报价单",
   "/approvals": "审批中心",
   "/users": "用户管理",
+  "/campaigns": "市场活动",
+  "/contracts": "合同管理",
+  "/forecast": "销售预测",
+  "/sales-targets": "销售目标",
+  "/settings": "服务设置",
 });
 
 const router = useRouter();
 const user = ref(currentUser());
+const searchText = ref("");
 const menuLabels = {
   "/dashboard": "仪表盘",
   "/leads": "线索",
@@ -72,6 +87,11 @@ const menuLabels = {
   "/quotes": "报价单",
   "/approvals": "审批中心",
   "/users": "用户管理",
+  "/campaigns": "市场活动",
+  "/contracts": "合同管理",
+  "/forecast": "销售预测",
+  "/sales-targets": "销售目标",
+  "/settings": "服务设置",
 };
 const visibleMenus = computed(() =>
   Object.keys(menuPermissions)
@@ -83,5 +103,31 @@ const logout = () => {
   localStorage.removeItem("crm_token");
   localStorage.removeItem("crm_user");
   router.push("/login");
+};
+const searchSuggestions = async (queryString, callback) => {
+  if (!queryString.trim()) {
+    callback([]);
+    return;
+  }
+  const groups = await search(queryString);
+  const suggestions = Object.values(groups)
+    .flat()
+    .map((item) => ({
+      value: `${item.title}（${item.subtitle || item.type}）`,
+      record: item,
+    }));
+  callback(suggestions);
+};
+const openSearch = (item) => {
+  const paths = {
+    ACCOUNT: "/accounts",
+    CONTACT: "/contacts",
+    LEAD: "/leads",
+    OPPORTUNITY: "/opportunities",
+    CASE: "/cases",
+    CONTRACT: "/contracts",
+    KNOWLEDGE: "/knowledge",
+  };
+  router.push(paths[item.record.type] || "/dashboard");
 };
 </script>

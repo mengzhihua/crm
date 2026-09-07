@@ -27,6 +27,12 @@
         <el-descriptions-item label="SLA">{{
           remaining(item.slaDueAt)
         }}</el-descriptions-item>
+        <el-descriptions-item label="首响时间">
+          {{ item.firstResponseAt || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="满意度">
+          {{ item.satisfactionScore || "-" }}
+        </el-descriptions-item>
       </el-descriptions>
       <p>{{ item.description }}</p>
       <div class="toolbar">
@@ -40,7 +46,34 @@
         <el-button type="warning" @click="escalate">升级</el-button>
         <el-button @click="assignVisible = true">分派</el-button>
       </div>
+      </el-card>
+    <el-card class="top-gap">
+      <template #header>服务评价</template>
+      <el-button
+        v-if="item && ['RESOLVED', 'CLOSED'].includes(item.status)"
+        type="primary"
+        @click="surveyVisible = true"
+      >提交评价</el-button>
     </el-card>
+    <el-dialog v-model="surveyVisible" title="服务评价">
+      <el-form :model="surveyForm" label-width="80px">
+        <el-form-item label="评分">
+          <el-rate v-model="surveyForm.score" :max="5" />
+        </el-form-item>
+        <el-form-item label="意见">
+          <el-input v-model="surveyForm.comment" type="textarea" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="surveyVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitSurvey">提交</el-button>
+      </template>
+    </el-dialog>
+    <RecordTimeline
+      class="top-gap"
+      target-type="CASE"
+      :target-id="route.params.id"
+    />
     <el-card>
       <template #header>评论时间线</template>
       <el-timeline
@@ -103,12 +136,15 @@ import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { cases } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import RecordTimeline from "../../components/RecordTimeline.vue";
 
 const route = useRoute();
 const item = ref();
 const comments = ref([]);
 const solutionVisible = ref(false);
 const assignVisible = ref(false);
+const surveyVisible = ref(false);
+const surveyForm = reactive({ score: 5, comment: "" });
 const statusForm = reactive({});
 const assignForm = reactive({ owner: "" });
 const commentForm = reactive({ author: "", content: "", internal: false });
@@ -163,6 +199,12 @@ const addComment = async () => {
   ElMessage.success("评论成功");
   commentForm.content = "";
   await load();
+};
+const submitSurvey = async () => {
+  await cases.survey(route.params.id, surveyForm);
+  surveyVisible.value = false;
+  ElMessage.success("评价已提交");
+  load();
 };
 
 onMounted(load);

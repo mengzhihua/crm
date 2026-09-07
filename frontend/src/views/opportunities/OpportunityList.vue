@@ -12,6 +12,7 @@
         />
       </el-select>
       <el-button type="primary" @click="load">查询</el-button>
+      <el-button @click="exportFile">导出</el-button>
       <el-button @click="view = view === 'table' ? 'kanban' : 'table'">{{
         view === "table" ? "看板视图" : "表格视图"
       }}</el-button>
@@ -139,7 +140,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { accounts, opportunities } from "../../api";
+import { accounts, exportCsv, opportunities } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
 
 const rows = ref([]);
@@ -182,6 +183,19 @@ const load = async () => {
   });
   rows.value = data.records;
   total.value = data.total;
+};
+
+const exportFile = async () => {
+  const blob = await exportCsv("/opportunities", {
+    keyword: keyword.value,
+    stage: stage.value,
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "opportunities.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 const open = (row) => {
