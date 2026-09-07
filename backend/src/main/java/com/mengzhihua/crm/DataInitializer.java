@@ -1,7 +1,12 @@
 package com.mengzhihua.crm;
 
+import com.mengzhihua.crm.approval.entity.ApprovalRule;
+import com.mengzhihua.crm.approval.repository.ApprovalRuleRepository;
+import com.mengzhihua.crm.auth.entity.User;
+import com.mengzhihua.crm.auth.repository.UserRepository;
 import com.mengzhihua.crm.common.enums.AccountLevel;
 import com.mengzhihua.crm.common.enums.AccountType;
+import com.mengzhihua.crm.common.enums.ApprovalTargetType;
 import com.mengzhihua.crm.common.enums.ArticleStatus;
 import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
@@ -10,18 +15,26 @@ import com.mengzhihua.crm.common.enums.LeadSource;
 import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.Rating;
+import com.mengzhihua.crm.common.enums.Role;
 import com.mengzhihua.crm.sales.entity.Account;
 import com.mengzhihua.crm.sales.entity.Lead;
 import com.mengzhihua.crm.sales.entity.Opportunity;
+import com.mengzhihua.crm.sales.entity.PriceBook;
+import com.mengzhihua.crm.sales.entity.PriceBookEntry;
+import com.mengzhihua.crm.sales.entity.Product;
 import com.mengzhihua.crm.sales.repository.AccountRepository;
 import com.mengzhihua.crm.sales.repository.LeadRepository;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
+import com.mengzhihua.crm.sales.repository.PriceBookEntryRepository;
+import com.mengzhihua.crm.sales.repository.PriceBookRepository;
+import com.mengzhihua.crm.sales.repository.ProductRepository;
 import com.mengzhihua.crm.service.entity.CrmCase;
 import com.mengzhihua.crm.service.entity.KnowledgeArticle;
 import com.mengzhihua.crm.service.service.CaseService;
 import com.mengzhihua.crm.service.service.KnowledgeService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -36,23 +49,44 @@ public class DataInitializer implements CommandLineRunner {
     private final OpportunityRepository opportunityRepository;
     private final CaseService caseService;
     private final KnowledgeService knowledgeService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ProductRepository productRepository;
+    private final PriceBookRepository priceBookRepository;
+    private final PriceBookEntryRepository priceBookEntryRepository;
+    private final ApprovalRuleRepository approvalRuleRepository;
 
     public DataInitializer(
             AccountRepository accountRepository,
             LeadRepository leadRepository,
             OpportunityRepository opportunityRepository,
             CaseService caseService,
-            KnowledgeService knowledgeService
+            KnowledgeService knowledgeService,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            ProductRepository productRepository,
+            PriceBookRepository priceBookRepository,
+            PriceBookEntryRepository priceBookEntryRepository,
+            ApprovalRuleRepository approvalRuleRepository
     ) {
         this.accountRepository = accountRepository;
         this.leadRepository = leadRepository;
         this.opportunityRepository = opportunityRepository;
         this.caseService = caseService;
         this.knowledgeService = knowledgeService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.productRepository = productRepository;
+        this.priceBookRepository = priceBookRepository;
+        this.priceBookEntryRepository = priceBookEntryRepository;
+        this.approvalRuleRepository = approvalRuleRepository;
     }
 
     @Override
     public void run(String... args) {
+        createUsers();
+        createCatalog();
+        createApprovalRules();
         if (accountRepository.count() > 0) {
             return;
         }
@@ -61,6 +95,112 @@ public class DataInitializer implements CommandLineRunner {
         createOpportunities();
         createCases();
         createKnowledge();
+    }
+
+    private void createUsers() {
+        if (userRepository.count() > 0) {
+            return;
+        }
+        createUser("admin", "admin123", "系统管理员", Role.ADMIN);
+        createUser("manager", "123456", "销售经理", Role.SALES_MANAGER);
+        createUser("sales", "123456", "销售代表", Role.SALES_REP);
+        createUser("service", "123456", "服务专员", Role.SERVICE_AGENT);
+    }
+
+    private void createUser(
+            String username,
+            String password,
+            String displayName,
+            Role role
+    ) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setDisplayName(displayName);
+        user.setRole(role);
+        user.setOwner(username);
+        userRepository.save(user);
+    }
+
+    private void createCatalog() {
+        PriceBook standard = priceBookRepository.findAll().stream()
+                .filter(PriceBook::isStandard)
+                .findFirst()
+                .orElseGet(() -> {
+                    PriceBook priceBook = new PriceBook();
+                    priceBook.setName("标准价格手册");
+                    priceBook.setStandard(true);
+                    priceBook.setActive(true);
+                    priceBook.setOwner("admin");
+                    return priceBookRepository.save(priceBook);
+                });
+        if (productRepository.count() > 0) {
+            return;
+        }
+        for (int i = 1; i <= 3; i++) {
+            Product product = new Product();
+            product.setCode("DEMO-" + i);
+            product.setName("演示产品" + i);
+            product.setCategory("标准服务");
+            product.setUnit("套");
+            product.setListPrice(new BigDecimal(i * 10000));
+            product.setActive(true);
+            product.setOwner("admin");
+            product = productRepository.save(product);
+            PriceBookEntry entry = new PriceBookEntry();
+            entry.setPriceBookId(standard.getId());
+            entry.setProductId(product.getId());
+            entry.setUnitPrice(product.getListPrice());
+            entry.setActive(true);
+            entry.setOwner("admin");
+            priceBookEntryRepository.save(entry);
+        }
+    }
+
+    private void createApprovalRules() {
+        if (approvalRuleRepository.count() > 0) {
+            return;
+        }
+        createRule(
+                "高额报价审批",
+                new BigDecimal("500000"),
+                null,
+                Role.ADMIN,
+                1
+        );
+        createRule(
+                "销售经理金额审批",
+                new BigDecimal("100000"),
+                null,
+                Role.SALES_MANAGER,
+                2
+        );
+        createRule(
+                "销售经理折扣审批",
+                null,
+                new BigDecimal("20"),
+                Role.SALES_MANAGER,
+                3
+        );
+    }
+
+    private void createRule(
+            String name,
+            BigDecimal minAmount,
+            BigDecimal minDiscountRate,
+            Role role,
+            int priority
+    ) {
+        ApprovalRule rule = new ApprovalRule();
+        rule.setName(name);
+        rule.setTargetType(ApprovalTargetType.QUOTE);
+        rule.setMinAmount(minAmount);
+        rule.setMinDiscountRate(minDiscountRate);
+        rule.setApproverRole(role);
+        rule.setPriority(priority);
+        rule.setActive(true);
+        rule.setOwner("admin");
+        approvalRuleRepository.save(rule);
     }
 
     private void createAccounts() {
@@ -72,6 +212,7 @@ public class DataInitializer implements CommandLineRunner {
                     i % 3 == 0 ? AccountType.CUSTOMER : AccountType.PROSPECT
             );
             account.setLevel(i % 3 == 0 ? AccountLevel.A : AccountLevel.B);
+            account.setOwner(i % 2 == 0 ? "sales" : "manager");
             accountRepository.save(account);
         }
     }
@@ -84,6 +225,7 @@ public class DataInitializer implements CommandLineRunner {
             lead.setSource(LeadSource.values()[i % LeadSource.values().length]);
             lead.setStatus(LeadStatus.values()[i % 4]);
             lead.setRating(Rating.values()[i % Rating.values().length]);
+            lead.setOwner(i % 2 == 0 ? "sales" : "manager");
             leadRepository.save(lead);
         }
     }
@@ -100,6 +242,7 @@ public class DataInitializer implements CommandLineRunner {
                     opportunity.getStage().getDefaultProbability()
             );
             opportunity.setExpectedCloseDate(LocalDate.now().plusDays(i * 5L));
+            opportunity.setOwner(i % 2 == 0 ? "sales" : "manager");
             opportunityRepository.save(opportunity);
         }
     }
@@ -118,6 +261,7 @@ public class DataInitializer implements CommandLineRunner {
             if (i <= 2) {
                 crmCase.setSlaDueAt(LocalDateTime.now().minusHours(2));
             }
+            crmCase.setOwner(i % 2 == 0 ? "service" : "manager");
             caseService.save(crmCase);
         }
     }
@@ -132,6 +276,7 @@ public class DataInitializer implements CommandLineRunner {
             article.setStatus(
                     i < 5 ? ArticleStatus.PUBLISHED : ArticleStatus.DRAFT
             );
+            article.setOwner("service");
             knowledgeService.save(article);
         }
     }

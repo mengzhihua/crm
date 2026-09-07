@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "联系人")
 @RestController
@@ -27,6 +28,7 @@ public class ContactController {
     }
 
     @Operation(summary = "分页查询联系人")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP','SERVICE_AGENT')")
     @GetMapping
     public Result<PageResult<Contact>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -38,18 +40,21 @@ public class ContactController {
     }
 
     @Operation(summary = "查询联系人")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP','SERVICE_AGENT')")
     @GetMapping("/{id}")
     public Result<Contact> get(@PathVariable Long id) {
         return Result.ok(contactService.get(id));
     }
 
     @Operation(summary = "新增联系人")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @PostMapping
     public Result<Contact> add(@RequestBody Contact contact) {
         return Result.ok(contactService.save(contact));
     }
 
     @Operation(summary = "编辑联系人")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @PutMapping("/{id}")
     public Result<Contact> edit(
             @PathVariable Long id,
@@ -60,6 +65,7 @@ public class ContactController {
     }
 
     @Operation(summary = "删除联系人")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         contactService.delete(id);

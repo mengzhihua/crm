@@ -3,6 +3,8 @@ package com.mengzhihua.crm.service.service;
 import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
+import com.mengzhihua.crm.common.SerialNumberGenerator;
+import com.mengzhihua.crm.auth.CurrentUser;
 import com.mengzhihua.crm.common.enums.CaseOrigin;
 import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
@@ -165,12 +167,10 @@ public class CaseService {
                 .format(DateTimeFormatter.BASIC_ISO_DATE);
         CrmCase latest = caseRepository
                 .findTopByCaseNoStartingWithOrderByCaseNoDesc(prefix);
-        int sequence = 1;
-        if (latest != null && latest.getCaseNo().length() >= 12) {
-            String suffix = latest.getCaseNo().substring(10);
-            sequence = Integer.parseInt(suffix) + 1;
-        }
-        return prefix + String.format("%04d", sequence);
+        return SerialNumberGenerator.next(
+                prefix,
+                latest == null ? null : latest.getCaseNo()
+        );
     }
 
     public void delete(Long id) {
@@ -214,7 +214,11 @@ public class CaseService {
 
     public CrmCase assign(Long id, CaseAssignRequest request) {
         CrmCase crmCase = get(id);
-        crmCase.setOwner(request.getOwner());
+        crmCase.setOwner(
+                request.getOwner() == null || request.getOwner().trim().isEmpty()
+                        ? CurrentUser.usernameOrDefault()
+                        : request.getOwner()
+        );
         return caseRepository.save(crmCase);
     }
 

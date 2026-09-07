@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "./views/Dashboard.vue";
 
 const routes = [
+  { path: "/login", component: () => import("./views/Login.vue") },
   { path: "/", redirect: "/dashboard" },
   { path: "/dashboard", component: Dashboard },
   { path: "/leads", component: () => import("./views/leads/LeadList.vue") },
@@ -38,9 +39,44 @@ const routes = [
     path: "/knowledge/:id",
     component: () => import("./views/knowledge/KnowledgeDetail.vue"),
   },
+  { path: "/products", component: () => import("./views/products/ProductList.vue") },
+  {
+    path: "/pricebooks",
+    component: () => import("./views/pricebooks/PriceBookList.vue"),
+  },
+  {
+    path: "/pricebooks/:id",
+    component: () => import("./views/pricebooks/PriceBookDetail.vue"),
+  },
+  { path: "/quotes", component: () => import("./views/quotes/QuoteList.vue") },
+  {
+    path: "/quotes/:id",
+    component: () => import("./views/quotes/QuoteDetail.vue"),
+  },
+  {
+    path: "/approvals",
+    component: () => import("./views/approvals/ApprovalList.vue"),
+  },
+  { path: "/users", component: () => import("./views/users/UserList.vue") },
+  {
+    path: "/opportunities/:id",
+    component: () => import("./views/opportunities/OpportunityDetail.vue"),
+  },
 ];
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+router.beforeEach((to) => {
+  if (to.path === "/login") {
+    return true;
+  }
+  if (!localStorage.getItem("crm_token")) {
+    return "/login";
+  }
+  return true;
+});
+
+export default router;

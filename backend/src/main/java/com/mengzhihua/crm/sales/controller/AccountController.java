@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "客户")
 @RestController
@@ -27,6 +28,7 @@ public class AccountController {
     }
 
     @Operation(summary = "分页查询客户")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP','SERVICE_AGENT')")
     @GetMapping
     public Result<PageResult<Account>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -37,24 +39,28 @@ public class AccountController {
     }
 
     @Operation(summary = "查询客户详情")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP','SERVICE_AGENT')")
     @GetMapping("/{id}")
     public Result<Account> get(@PathVariable Long id) {
         return Result.ok(accountService.get(id));
     }
 
     @Operation(summary = "客户360视图")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP','SERVICE_AGENT')")
     @GetMapping("/{id}/overview")
     public Result<?> overview(@PathVariable Long id) {
         return Result.ok(accountService.overview(id));
     }
 
     @Operation(summary = "新增客户")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @PostMapping
     public Result<Account> add(@RequestBody Account account) {
         return Result.ok(accountService.save(account));
     }
 
     @Operation(summary = "编辑客户")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @PutMapping("/{id}")
     public Result<Account> edit(
             @PathVariable Long id,
@@ -65,6 +71,7 @@ public class AccountController {
     }
 
     @Operation(summary = "删除客户")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES_REP')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         accountService.delete(id);
