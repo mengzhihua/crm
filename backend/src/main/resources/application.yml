@@ -1,5 +1,8 @@
 server:
   port: 8080
+crm:
+  open:
+    api-key: ${CRM_OPEN_API_KEY:crm-open-key}
 spring:
   datasource:
     url: jdbc:h2:file:./data/crm
