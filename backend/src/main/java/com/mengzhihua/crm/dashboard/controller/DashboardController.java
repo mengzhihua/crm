@@ -1,4 +1,4 @@
-package com.mengzhihua.crm.dashboard;
+package com.mengzhihua.crm.dashboard.controller;
 
 import com.mengzhihua.crm.common.Result;
 import com.mengzhihua.crm.common.enums.CaseStatus;
