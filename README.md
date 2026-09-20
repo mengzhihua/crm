@@ -69,7 +69,8 @@ cd crm-1.0.0
 
 - `crm-1.0.0-linux-x64.zip` → `bin/crm`
 - `crm-1.0.0-windows-x64.zip` → 双击 `crm.exe`
-- `crm-1.0.0-macos-x64.zip` → 双击 `crm.app`
+- `crm-1.0.0-macos-arm64.zip` → Apple Silicon（M 系列），双击 `crm.app`
+- `crm-1.0.0-macos-x64.zip` → Intel Mac，双击 `crm.app`
 
 浏览器访问 `http://127.0.0.1:8091`。本系统无登录页，打开即可用。
 
