@@ -100,7 +100,7 @@ watch(
   () => {
     user.value = currentUser();
     if (route.path !== "/login") {
-      loadNotifications();
+      startPolling();
     }
   },
 );
@@ -118,6 +118,12 @@ const loadNotifications = async () => {
   } catch {
     await refreshUnread();
     unreadItems.value = [];
+  }
+};
+const startPolling = () => {
+  loadNotifications();
+  if (!notificationTimer) {
+    notificationTimer = window.setInterval(loadNotifications, 60000);
   }
 };
 const markAllRead = async () => {
@@ -189,8 +195,7 @@ const openSearch = (item) => {
 };
 onMounted(() => {
   if (route.path !== "/login") {
-    loadNotifications();
-    notificationTimer = window.setInterval(loadNotifications, 60000);
+    startPolling();
   }
 });
 onUnmounted(() => window.clearInterval(notificationTimer));
