@@ -10,6 +10,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Table;
+import javax.persistence.Version;
 import java.time.LocalDateTime;
 
 @Data
@@ -33,4 +34,7 @@ public class ApprovalStep extends BaseEntity {
     private String comment;
 
     private LocalDateTime decidedAt;
+
+    @Version
+    private Long version;
 }

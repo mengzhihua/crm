@@ -7,10 +7,14 @@ import com.mengzhihua.crm.common.CsvExportService;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.enums.Role;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
@@ -21,10 +25,20 @@ import java.util.stream.Collectors;
 
 @Service
 public class AuditLogService {
+    private static final Logger log = LoggerFactory.getLogger(AuditLogService.class);
     private final AuditLogRepository repository;
 
     public AuditLogService(AuditLogRepository repository) {
         this.repository = repository;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordLogin(String action, String username, int status) {
+        try {
+            record(action, username, status);
+        } catch (RuntimeException exception) {
+            log.warn("记录登录审计失败，忽略该异常", exception);
+        }
     }
 
     public AuditLog record(String action, String username, int status) {

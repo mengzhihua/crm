@@ -302,7 +302,27 @@ public class ReportService {
         List<String> headers = new ArrayList<>();
         if ("sales-funnel".equals(report)) {
             headers = Arrays.asList("类型", "状态", "数量", "金额");
-            salesFunnel().get("leads");
+            Map<String, Object> funnel = salesFunnel();
+            List<Map<String, Object>> leads =
+                    (List<Map<String, Object>>) funnel.get("leads");
+            for (Map<String, Object> item : leads) {
+                rows.add(Arrays.asList(
+                        "线索",
+                        item.get("status"),
+                        item.get("count"),
+                        ""
+                ));
+            }
+            List<Map<String, Object>> opportunities =
+                    (List<Map<String, Object>>) funnel.get("opportunities");
+            for (Map<String, Object> item : opportunities) {
+                rows.add(Arrays.asList(
+                        "商机",
+                        item.get("stage"),
+                        item.get("count"),
+                        item.get("amount")
+                ));
+            }
         } else if ("sales-performance".equals(report)) {
             headers = Arrays.asList("负责人", "赢单数", "赢单金额", "目标金额", "达成率");
             for (Map<String, Object> item : salesPerformance(year, month)) {

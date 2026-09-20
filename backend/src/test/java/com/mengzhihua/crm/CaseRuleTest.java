@@ -4,6 +4,10 @@ import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
 import com.mengzhihua.crm.common.enums.CaseType;
+import com.mengzhihua.crm.common.enums.NotificationType;
+import com.mengzhihua.crm.notification.entity.Notification;
+import com.mengzhihua.crm.notification.repository.NotificationRepository;
+import com.mengzhihua.crm.service.dto.CaseAssignRequest;
 import com.mengzhihua.crm.service.dto.CaseStatusRequest;
 import com.mengzhihua.crm.service.dto.CaseSurveyRequest;
 import com.mengzhihua.crm.service.entity.AssignmentRule;
@@ -52,13 +56,40 @@ class CaseRuleTest {
     @Autowired
     private CaseSurveyRepository surveyRepository;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     @BeforeEach
     void setUp() {
+        notificationRepository.deleteAll();
         surveyRepository.deleteAll();
         commentRepository.deleteAll();
         caseRepository.deleteAll();
         assignmentRuleRepository.deleteAll();
         slaPolicyRepository.deleteAll();
+    }
+
+    @Test
+    void assignmentSendsNotificationOnlyWhenAssigned() {
+        CrmCase crmCase = new CrmCase();
+        crmCase.setSubject("待分派工单");
+        crmCase = caseService.save(crmCase);
+
+        CaseAssignRequest request = new CaseAssignRequest();
+        request.setOwner("manager");
+        caseService.assign(crmCase.getId(), request);
+
+        Notification notification = notificationRepository.findAll().stream()
+                .filter(item -> "manager".equals(item.getRecipient()))
+                .findFirst()
+                .orElseThrow(AssertionError::new);
+        assertEquals(NotificationType.CASE, notification.getType());
+        assertEquals("工单已分派：待分派工单", notification.getTitle());
+
+        CaseStatusRequest statusRequest = new CaseStatusRequest();
+        statusRequest.setStatus(CaseStatus.IN_PROGRESS);
+        caseService.changeStatus(crmCase.getId(), statusRequest);
+        assertEquals(1, notificationRepository.findAll().size());
     }
 
     @Test
