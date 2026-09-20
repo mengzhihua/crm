@@ -29,6 +29,18 @@ public class ApprovalDataMigrator implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         migrateRuleRoles();
         migrateRequests();
+        backfillVersion("crm_approval_request");
+        backfillVersion("crm_approval_step");
+    }
+
+    private void backfillVersion(String table) {
+        try {
+            jdbcTemplate.update(
+                    "UPDATE " + table + " SET version = 0 WHERE version IS NULL"
+            );
+        } catch (RuntimeException exception) {
+            log.warn("{} 版本号回填失败，继续启动", table, exception);
+        }
     }
 
     private void migrateRuleRoles() {
