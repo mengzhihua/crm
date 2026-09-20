@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 @Tag(name = "认证")
@@ -44,7 +45,8 @@ public class AuthController {
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public ResponseEntity<Result<LoginResponse>> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest
     ) {
         User user;
         try {
@@ -53,6 +55,8 @@ public class AuthController {
             auditLogService.recordLogin(
                     "LOGIN_FAILED",
                     request.getUsername(),
+                    null,
+                    httpRequest,
                     401
             );
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -63,12 +67,20 @@ public class AuthController {
             auditLogService.recordLogin(
                     "LOGIN_FAILED",
                     request.getUsername(),
+                    null,
+                    httpRequest,
                     401
             );
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Result.fail("用户名或密码错误"));
         }
-        auditLogService.recordLogin("LOGIN", user.getUsername(), 200);
+        auditLogService.recordLogin(
+                "LOGIN",
+                user.getUsername(),
+                user.getRole(),
+                httpRequest,
+                200
+        );
         return ResponseEntity.ok(Result.ok(new LoginResponse(
                 tokenService.create(user),
                 user

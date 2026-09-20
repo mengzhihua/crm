@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -80,6 +81,12 @@ class AuditLogTest {
         assertEquals(1, auditLogRepository.findAll().stream()
                 .filter(item -> "LOGIN".equals(item.getAction()))
                 .count());
+        AuditLog login = auditLogRepository.findAll().stream()
+                .filter(item -> "LOGIN".equals(item.getAction()))
+                .findFirst()
+                .get();
+        assertEquals(Role.ADMIN, login.getRole());
+        assertFalse(login.getIp() == null || login.getIp().trim().isEmpty());
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"admin\",\"password\":\"wrong\"}"))
