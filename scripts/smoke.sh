@@ -38,6 +38,7 @@ submitted=$(auth_json -X POST "$base/api/quotes/$quote_id/submit")
 jq -e '.data.status == "IN_REVIEW"' <<<"$submitted" >/dev/null
 approval_id=$(manager_json "$base/api/approvals?mine=true&page=1&size=100" | jq -r '.data.records[] | select(.targetId == '"$quote_id"') | .id' | head -n 1)
 manager_json -X PUT "$base/api/approvals/$approval_id/approve" -d '{"comment":"审批通过"}' >/dev/null
+manager_json "$base/api/approvals/$approval_id/steps" | jq -e '.data != null' >/dev/null
 accepted=$(auth_json -X POST "$base/api/quotes/$quote_id/accept")
 total=$(jq -r '.data.totalAmount' <<<"$accepted")
 opportunity=$(auth_json "$base/api/opportunities/$opp")
@@ -63,4 +64,8 @@ auth_json -X PUT "$base/api/cases/$case_id/status" -d '{"status":"RESOLVED","sol
 auth_json -X PUT "$base/api/cases/$case_id/status" -d '{"status":"CLOSED"}' >/dev/null
 summary=$(auth_json "$base/api/dashboard/summary")
 jq -e '.data.newLeadCount != null and .data.pipeline != null and .data.openCaseCount != null' <<<"$summary" >/dev/null
-echo "冒烟测试通过：市场活动、报价审批、合同回款、预测搜索导出、工单与仪表盘"
+auth_json "$base/api/notifications/unread-count" | jq -e '.data != null' >/dev/null
+auth_json -X PUT "$base/api/notifications/read-all" >/dev/null
+auth_json "$base/api/audit-logs?page=1&size=10" | jq -e '.data != null' >/dev/null
+auth_json "$base/api/reports/sales-funnel" | jq -e '.data.conversion != null' >/dev/null
+echo "冒烟测试通过：市场活动、报价审批、通知、审计、报表、合同回款、预测搜索导出、工单与仪表盘"
