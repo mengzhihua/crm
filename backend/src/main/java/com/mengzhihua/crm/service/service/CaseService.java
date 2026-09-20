@@ -10,6 +10,9 @@ import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
 import com.mengzhihua.crm.common.enums.CaseType;
 import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.common.enums.NotificationType;
+import com.mengzhihua.crm.common.enums.Role;
+import com.mengzhihua.crm.notification.service.NotificationService;
 import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.service.dto.CaseSurveyRequest;
 import com.mengzhihua.crm.service.entity.AssignmentRule;
@@ -56,6 +59,7 @@ public class CaseService {
     private final CaseSurveyRepository surveyRepository;
     private final CaseArticleLinkRepository articleLinkRepository;
     private final FieldHistoryService fieldHistoryService;
+    private final NotificationService notificationService;
 
     public CaseService(
             CrmCaseRepository caseRepository,
@@ -64,7 +68,8 @@ public class CaseService {
             AssignmentRuleRepository assignmentRuleRepository,
             CaseSurveyRepository surveyRepository,
             CaseArticleLinkRepository articleLinkRepository,
-            FieldHistoryService fieldHistoryService
+            FieldHistoryService fieldHistoryService,
+            NotificationService notificationService
     ) {
         this.caseRepository = caseRepository;
         this.commentRepository = commentRepository;
@@ -73,6 +78,7 @@ public class CaseService {
         this.surveyRepository = surveyRepository;
         this.articleLinkRepository = articleLinkRepository;
         this.fieldHistoryService = fieldHistoryService;
+        this.notificationService = notificationService;
     }
 
     private static Map<CaseStatus, Set<CaseStatus>> createTransitions() {
@@ -246,6 +252,16 @@ public class CaseService {
             crmCase.setClosedAt(LocalDateTime.now());
         }
         CrmCase saved = caseRepository.save(crmCase);
+        if (saved.getOwner() != null) {
+            notificationService.send(
+                    saved.getOwner(),
+                    NotificationType.CASE,
+                    "工单已分派：" + saved.getSubject(),
+                    "您有一条新的工单待处理",
+                    RelatedType.CASE,
+                    saved.getId()
+            );
+        }
         fieldHistoryService.record(
                 RelatedType.CASE,
                 id,
@@ -266,6 +282,7 @@ public class CaseService {
         crmCase.setEscalated(true);
         crmCase.setPriority(crmCase.getPriority().next());
         CrmCase saved = caseRepository.save(crmCase);
+        notifyEscalation(saved);
         fieldHistoryService.record(
                 RelatedType.CASE,
                 id,
@@ -396,8 +413,30 @@ public class CaseService {
                 comment.setContent("SLA 超期自动升级");
                 comment.setInternal(true);
                 commentRepository.save(comment);
+                notifyEscalation(crmCase);
             }
         }
+    }
+
+    private void notifyEscalation(CrmCase crmCase) {
+        if (crmCase.getOwner() != null) {
+            notificationService.send(
+                    crmCase.getOwner(),
+                    NotificationType.CASE,
+                    "工单已升级：" + crmCase.getSubject(),
+                    "工单已升级，请及时处理",
+                    RelatedType.CASE,
+                    crmCase.getId()
+            );
+        }
+        notificationService.sendToRole(
+                Role.ADMIN,
+                NotificationType.CASE,
+                "工单升级通知：" + crmCase.getSubject(),
+                "工单已升级，请关注处理",
+                RelatedType.CASE,
+                crmCase.getId()
+        );
     }
 
     private String resolveOwner(CrmCase crmCase) {

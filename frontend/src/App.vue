@@ -22,6 +22,24 @@
     <el-container>
       <el-header>
         <span>{{ titles[$route.path] || "CRM 管理平台" }}</span>
+        <el-badge :value="unreadCount" :hidden="!unreadCount" class="notify-bell">
+          <el-popover placement="bottom" width="360" trigger="click">
+            <template #reference>
+              <el-button circle>🔔</el-button>
+            </template>
+            <div v-for="item in unreadItems" :key="item.id" class="notify-item">
+              <strong>{{ item.title }}</strong>
+              <small>{{ formatTime(item.createdAt) }}</small>
+            </div>
+            <el-empty v-if="!unreadItems.length" description="暂无未读通知" />
+            <div class="notify-actions">
+              <el-button link @click="markAllRead">全部标为已读</el-button>
+              <el-button link type="primary" @click="router.push('/notifications')">
+                查看全部
+              </el-button>
+            </div>
+          </el-popover>
+        </el-badge>
         <el-autocomplete
           v-model="searchText"
           :fetch-suggestions="searchSuggestions"
@@ -43,10 +61,10 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { maps } from "./utils/enums";
-import { search } from "./api";
+import { notifications, search } from "./api";
 import { canSee, currentUser, menuPermissions } from "./utils/permission";
 
 const titles = reactive({
@@ -68,6 +86,9 @@ const titles = reactive({
   "/forecast": "销售预测",
   "/sales-targets": "销售目标",
   "/settings": "服务设置",
+  "/notifications": "通知中心",
+  "/audit-logs": "操作审计",
+  "/reports": "报表中心",
 });
 
 const router = useRouter();
@@ -77,9 +98,31 @@ watch(
   () => route.path,
   () => {
     user.value = currentUser();
+    loadNotifications();
   },
 );
 const searchText = ref("");
+const unreadCount = ref(0);
+const unreadItems = ref([]);
+let notificationTimer;
+const loadNotifications = async () => {
+  try {
+    unreadCount.value = await notifications.unreadCount();
+    unreadItems.value = (await notifications.list({
+      page: 1,
+      size: 5,
+      unreadOnly: true,
+    })).records;
+  } catch {
+    unreadCount.value = 0;
+    unreadItems.value = [];
+  }
+};
+const markAllRead = async () => {
+  await notifications.markAllRead();
+  await loadNotifications();
+};
+const formatTime = (value) => value ? new Date(value).toLocaleString() : "-";
 const menuLabels = {
   "/dashboard": "仪表盘",
   "/leads": "线索",
@@ -99,6 +142,9 @@ const menuLabels = {
   "/forecast": "销售预测",
   "/sales-targets": "销售目标",
   "/settings": "服务设置",
+  "/notifications": "通知",
+  "/audit-logs": "操作审计",
+  "/reports": "报表中心",
 };
 const visibleMenus = computed(() =>
   Object.keys(menuPermissions)
@@ -137,4 +183,9 @@ const openSearch = (item) => {
   };
   router.push(paths[item.record.type] || "/dashboard");
 };
+onMounted(() => {
+  loadNotifications();
+  notificationTimer = window.setInterval(loadNotifications, 60000);
+});
+onUnmounted(() => window.clearInterval(notificationTimer));
 </script>
