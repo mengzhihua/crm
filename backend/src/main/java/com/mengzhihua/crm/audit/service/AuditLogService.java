@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,12 +34,31 @@ public class AuditLogService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordLogin(String action, String username, int status) {
+    public void recordLogin(
+            String action,
+            String username,
+            Role role,
+            HttpServletRequest request,
+            int status
+    ) {
         try {
-            record(action, username, status);
+            AuditLog auditLog = new AuditLog();
+            auditLog.setAction(action);
+            auditLog.setUsername(username);
+            auditLog.setRole(role);
+            auditLog.setStatus(status);
+            auditLog.setMethod("POST");
+            auditLog.setPath("/api/auth/login");
+            auditLog.setModule("auth");
+            auditLog.setIp(clientIp(request));
+            repository.save(auditLog);
         } catch (RuntimeException exception) {
             log.warn("记录登录审计失败，忽略该异常", exception);
         }
+    }
+
+    public static String clientIp(HttpServletRequest request) {
+        return request.getRemoteAddr();
     }
 
     public AuditLog record(String action, String username, int status) {

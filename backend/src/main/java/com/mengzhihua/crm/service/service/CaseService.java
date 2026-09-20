@@ -45,6 +45,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -286,13 +287,15 @@ public class CaseService {
     public CrmCase assign(Long id, CaseAssignRequest request) {
         CrmCase crmCase = get(id);
         String oldOwner = crmCase.getOwner();
-        crmCase.setOwner(
+        String newOwner =
                 request.getOwner() == null || request.getOwner().trim().isEmpty()
                         ? CurrentUser.usernameOrDefault()
-                        : request.getOwner()
-        );
+                        : request.getOwner();
+        crmCase.setOwner(newOwner);
         CrmCase saved = caseRepository.save(crmCase);
-        if (saved.getOwner() != null && !saved.getOwner().trim().isEmpty()) {
+        if (!Objects.equals(oldOwner, saved.getOwner())
+                && saved.getOwner() != null
+                && !saved.getOwner().trim().isEmpty()) {
             notificationService.send(
                     saved.getOwner(),
                     NotificationType.CASE,

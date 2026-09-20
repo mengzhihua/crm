@@ -14,7 +14,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
-    @Query("update Notification n set n.read = true, n.readAt = :now "
+    @Query("update Notification n set n.read = true, n.readAt = :now, "
+            + "n.updatedAt = :now "
             + "where n.recipient = :recipient and n.read = false")
     int markAllRead(
             @Param("recipient") String recipient,

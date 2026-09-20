@@ -32,11 +32,18 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("crm_token");
-      localStorage.removeItem("crm_user");
+      const hasToken = Boolean(localStorage.getItem("crm_token"));
+      if (hasToken) {
+        localStorage.removeItem("crm_token");
+        localStorage.removeItem("crm_user");
+      }
       if (router.currentRoute.value.path !== "/login") {
         router.push("/login");
       }
+      if (hasToken) {
+        ElMessage.error(error.message || "网络错误");
+      }
+      return Promise.reject(error);
     }
     ElMessage.error(error.message || "网络错误");
     return Promise.reject(error);

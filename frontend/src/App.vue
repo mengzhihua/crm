@@ -65,6 +65,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { maps } from "./utils/enums";
 import { notifications, search } from "./api";
+import { refreshUnread, unreadCount } from "./utils/notify";
 import { canSee, currentUser, menuPermissions } from "./utils/permission";
 
 const titles = reactive({
@@ -98,24 +99,31 @@ watch(
   () => route.path,
   () => {
     user.value = currentUser();
-    loadNotifications();
+    if (route.path !== "/login") {
+      startPolling();
+    }
   },
 );
 const searchText = ref("");
-const unreadCount = ref(0);
 const unreadItems = ref([]);
 let notificationTimer;
 const loadNotifications = async () => {
   try {
-    unreadCount.value = await notifications.unreadCount();
+    await refreshUnread();
     unreadItems.value = (await notifications.list({
       page: 1,
       size: 5,
       unreadOnly: true,
     })).records;
   } catch {
-    unreadCount.value = 0;
+    await refreshUnread();
     unreadItems.value = [];
+  }
+};
+const startPolling = () => {
+  loadNotifications();
+  if (!notificationTimer) {
+    notificationTimer = window.setInterval(loadNotifications, 60000);
   }
 };
 const markAllRead = async () => {
@@ -153,6 +161,8 @@ const visibleMenus = computed(() =>
 );
 const roleText = (role) => maps.role[role] || role || "";
 const logout = () => {
+  window.clearInterval(notificationTimer);
+  notificationTimer = undefined;
   localStorage.removeItem("crm_token");
   localStorage.removeItem("crm_user");
   router.push("/login");
@@ -184,8 +194,9 @@ const openSearch = (item) => {
   router.push(paths[item.record.type] || "/dashboard");
 };
 onMounted(() => {
-  loadNotifications();
-  notificationTimer = window.setInterval(loadNotifications, 60000);
+  if (route.path !== "/login") {
+    startPolling();
+  }
 });
 onUnmounted(() => window.clearInterval(notificationTimer));
 </script>

@@ -51,7 +51,7 @@ public class AuditLogFilter extends OncePerRequestFilter {
                             request.getQueryString(),
                             response.getStatus(),
                             System.currentTimeMillis() - started,
-                            request.getRemoteAddr()
+                            AuditLogService.clientIp(request)
                     );
                 } catch (RuntimeException ignored) {
                     // Audit must never change the business response.
