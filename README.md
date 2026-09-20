@@ -13,7 +13,7 @@
 
 ## 功能概览
 
-按三期迭代交付，全部已合并到 `main`：
+按四期迭代交付：
 
 **一期 · 销售与服务基础**
 - 线索管理与一键转化（客户 + 联系人 + 商机）
@@ -36,6 +36,12 @@
 - 字段变更历史、备注、附件（记录动态时间线）
 - 全局搜索（客户 / 联系人 / 线索 / 商机 / 工单 / 合同 / 知识）与列表 CSV 导出
 
+**四期 · 通知、审批、审计与报表**
+- 通知中心：审批、工单、合同通知，未读提醒和批量已读
+- 多级报价审批：有序审批步骤、角色校验与审批时间线
+- 操作审计：写操作、登录结果、管理员查询和 CSV 导出
+- 报表中心：销售漏斗、销售业绩、工单分析、活动 ROI、应收账款
+
 ## 对象映射
 
 | Salesforce 对象 | 本系统模块 |
@@ -55,6 +61,10 @@
 | Campaign / CampaignMember | 市场活动与活动成员 |
 | Contract / PaymentPlan / PaymentRecord | 合同、回款计划与回款记录 |
 | SalesTarget / Forecast | 销售目标与销售预测 |
+| Notification | 通知中心 |
+| ApprovalStep | 多级审批步骤 |
+| AuditLog | 操作审计 |
+| Report | 销售与服务报表 |
 | SlaPolicy / AssignmentRule / CaseSurvey | SLA、工单分派与满意度 |
 | FieldHistory / Note / Attachment | 字段历史、备注与附件动态 |
 | Search / CSV Export | 全局搜索与列表导出 |
@@ -71,6 +81,8 @@ backend/                       Spring Boot 后端（包 com.mengzhihua.crm）
   ├─ contract/                 合同与回款
   ├─ forecast/                 销售目标与预测
   ├─ record/                   字段历史、备注、附件
+  ├─ notification/ audit/      通知中心与操作审计
+  ├─ report/                   销售、服务、回款报表
   ├─ search/                   全局搜索
   ├─ dashboard/                仪表盘统计
   ├─ common/ config/           Result/PageResult、BizException、枚举、安全与调度配置
@@ -139,6 +151,10 @@ schema 变更或需要重置演示数据时执行 `rm -rf backend/data` 后重�
 | `/api/opportunities/{id}/items` | 商机产品行项目 |
 | `/api/products`、`/api/pricebooks`、`/api/quotes` | 产品、价格手册、报价 |
 | `/api/approval-rules`、`/api/approvals` | 审批规则与审批申请 |
+| `/api/approvals/{id}/steps` | 审批步骤时间线 |
+| `/api/notifications` | 通知中心、未读数量和已读操作 |
+| `/api/audit-logs` | 管理员操作审计与 CSV |
+| `/api/reports` | 销售漏斗、业绩、工单、活动 ROI、应收报表 |
 | `/api/cases`、`/api/knowledge` | 工单与知识库 |
 | `/api/sla-policies`、`/api/assignment-rules` | SLA 与分派规则 |
 | `/api/campaigns`、`/api/contracts` | 市场活动、合同与回款 |
@@ -158,6 +174,7 @@ schema 变更或需要重置演示数据时执行 `rm -rf backend/data` 后重�
 | SALES_MANAGER | 销售、产品价格、报价审批、市场活动、合同、预测、销售目标、仪表盘；服务与知识只读 |
 | SALES_REP | 销售、报价、合同读写；产品价格、市场活动、预测只读；服务与知识只读 |
 | SERVICE_AGENT | 工单、知识、活动读写；客户联系人只读；仪表盘 |
+| 新增菜单 | 通知（全角色）、操作审计（ADMIN）、报表中心（ADMIN/SALES_MANAGER） |
 
 ## 测试
 
@@ -175,4 +192,4 @@ bash scripts/smoke.sh
 
 ## 后续规划
 
-通知中心、报表中心、多租户、多级审批流程与操作审计。
+多租户、消息渠道集成、可配置仪表盘与更细粒度数据权限。

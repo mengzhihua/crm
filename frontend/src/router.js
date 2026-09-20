@@ -78,6 +78,15 @@ const routes = [
     component: () => import("./views/forecast/SalesTargetList.vue"),
   },
   { path: "/settings", component: () => import("./views/settings/ServiceSettings.vue") },
+  {
+    path: "/notifications",
+    component: () => import("./views/notifications/NotificationList.vue"),
+  },
+  {
+    path: "/audit-logs",
+    component: () => import("./views/audit/AuditLogList.vue"),
+  },
+  { path: "/reports", component: () => import("./views/reports/ReportCenter.vue") },
 ];
 
 const router = createRouter({

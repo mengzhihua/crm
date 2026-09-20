@@ -73,7 +73,10 @@ export const approvals = {
   list: (params = {}) => api.get("/approvals", { params }),
   approve: (id, data) => api.put(`/approvals/${id}/approve`, data),
   reject: (id, data) => api.put(`/approvals/${id}/reject`, data),
+  steps: (id) => api.get(`/approvals/${id}/steps`),
 };
+
+export const approvalRules = crud("/approval-rules");
 
 export const users = crud("/users");
 users.password = (id, data) => api.put(`/users/${id}/password`, data);
@@ -130,6 +133,27 @@ export const records = {
 export const search = (q) => api.get("/search", { params: { q } });
 
 export const serviceDashboard = () => api.get("/dashboard/service");
+
+export const notifications = {
+  list: (params = {}) => api.get("/notifications", { params }),
+  unreadCount: () => api.get("/notifications/unread-count"),
+  markRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put("/notifications/read-all"),
+};
+
+export const auditLogs = {
+  list: (params = {}) => api.get("/audit-logs", { params }),
+  export: (params = {}) => exportCsv("/audit-logs", params),
+};
+
+export const reports = {
+  salesFunnel: () => api.get("/reports/sales-funnel"),
+  salesPerformance: (params = {}) => api.get("/reports/sales-performance", { params }),
+  caseAnalysis: (params = {}) => api.get("/reports/case-analysis", { params }),
+  campaignRoi: () => api.get("/reports/campaign-roi"),
+  receivables: () => api.get("/reports/receivables"),
+  export: (name, params = {}) => exportCsv(`/reports/${name}`, params),
+};
 
 export const exportCsv = (path, params = {}) => api.get(`${path}/export`, {
   params,

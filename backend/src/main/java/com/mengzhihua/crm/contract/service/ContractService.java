@@ -8,6 +8,8 @@ import com.mengzhihua.crm.common.enums.ContractStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.PaymentStatus;
 import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.common.enums.NotificationType;
+import com.mengzhihua.crm.notification.service.NotificationService;
 import com.mengzhihua.crm.contract.dto.ContractTerminateRequest;
 import com.mengzhihua.crm.contract.dto.PaymentPlanRequest;
 import com.mengzhihua.crm.contract.dto.PaymentRecordRequest;
@@ -43,6 +45,7 @@ public class ContractService {
     private final QuoteRepository quoteRepository;
     private final OpportunityRepository opportunityRepository;
     private final FieldHistoryService fieldHistoryService;
+    private final NotificationService notificationService;
 
     public ContractService(
             ContractRepository contractRepository,
@@ -50,7 +53,8 @@ public class ContractService {
             PaymentRecordRepository paymentRecordRepository,
             QuoteRepository quoteRepository,
             OpportunityRepository opportunityRepository,
-            FieldHistoryService fieldHistoryService
+            FieldHistoryService fieldHistoryService,
+            NotificationService notificationService
     ) {
         this.contractRepository = contractRepository;
         this.paymentPlanRepository = paymentPlanRepository;
@@ -58,6 +62,7 @@ public class ContractService {
         this.quoteRepository = quoteRepository;
         this.opportunityRepository = opportunityRepository;
         this.fieldHistoryService = fieldHistoryService;
+        this.notificationService = notificationService;
     }
 
     public PageResult<Contract> list(
@@ -265,6 +270,16 @@ public class ContractService {
                     && contract.getEndDate().isBefore(LocalDate.now())) {
                 contract.setStatus(ContractStatus.EXPIRED);
                 contractRepository.save(contract);
+                if (contract.getOwner() != null) {
+                    notificationService.send(
+                            contract.getOwner(),
+                            NotificationType.CONTRACT,
+                            "合同已过期：" + contract.getName(),
+                            "合同已超过结束日期",
+                            RelatedType.CONTRACT,
+                            contract.getId()
+                    );
+                }
             }
         }
     }

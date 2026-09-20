@@ -1,7 +1,7 @@
 package com.mengzhihua.crm.approval.controller;
 
 import com.mengzhihua.crm.approval.entity.ApprovalRule;
-import com.mengzhihua.crm.approval.repository.ApprovalRuleRepository;
+import com.mengzhihua.crm.approval.service.ApprovalService;
 import com.mengzhihua.crm.common.Result;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,20 +21,20 @@ import java.util.List;
 @RequestMapping("/api/approval-rules")
 @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER')")
 public class ApprovalRuleController {
-    private final ApprovalRuleRepository ruleRepository;
+    private final ApprovalService approvalService;
 
-    public ApprovalRuleController(ApprovalRuleRepository ruleRepository) {
-        this.ruleRepository = ruleRepository;
+    public ApprovalRuleController(ApprovalService approvalService) {
+        this.approvalService = approvalService;
     }
 
     @GetMapping
     public Result<List<ApprovalRule>> list() {
-        return Result.ok(ruleRepository.findAll());
+        return Result.ok(approvalService.rules());
     }
 
     @PostMapping
     public Result<ApprovalRule> add(@RequestBody ApprovalRule rule) {
-        return Result.ok(ruleRepository.save(rule));
+        return Result.ok(approvalService.saveRule(rule));
     }
 
     @PutMapping("/{id}")
@@ -43,12 +43,12 @@ public class ApprovalRuleController {
             @RequestBody ApprovalRule rule
     ) {
         rule.setId(id);
-        return Result.ok(ruleRepository.save(rule));
+        return Result.ok(approvalService.saveRule(rule));
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        ruleRepository.deleteById(id);
+        approvalService.deleteRule(id);
         return Result.ok();
     }
 }
