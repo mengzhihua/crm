@@ -77,12 +77,11 @@ public class OpenIrController {
         String type = String.valueOf(body.getOrDefault("type", ""));
         String targetKey = String.valueOf(body.getOrDefault("targetKey", ""));
         if ("CRM_ADVANCE_STAGE".equals(type)) {
-            Long id = Long.valueOf(targetKey);
-            Opportunity opportunity = opportunityService.get(id);
+            Opportunity opportunity = opportunityOf(targetKey);
             OpportunityStage next = nextStage(opportunity.getStage());
             OpportunityStageRequest request = new OpportunityStageRequest();
             request.setStage(next);
-            return Result.ok(opportunityService.changeStage(id, request));
+            return Result.ok(opportunityService.changeStage(opportunity.getId(), request));
         }
         if ("CRM_ESCALATE_CASE".equals(type)) {
             CrmCase crmCase = cases.findAll().stream()
@@ -93,6 +92,22 @@ public class OpenIrController {
             return Result.ok(caseService.escalate(crmCase.getId()));
         }
         throw new BizException("不支持的 IR 指令: " + type);
+    }
+
+    private Opportunity opportunityOf(String targetKey) {
+        if (targetKey == null || targetKey.trim().isEmpty() || "null".equals(targetKey)) {
+            throw new BizException("商机ID 必填");
+        }
+        String value = targetKey.trim();
+        try {
+            return opportunityService.get(Long.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return opportunities.findAll().stream()
+                    .filter(item -> value.equals(item.getName())
+                            || value.equals(String.valueOf(item.getId())))
+                    .findFirst()
+                    .orElseThrow(() -> new BizException("商机不存在: " + value));
+        }
     }
 
     private OpportunityStage nextStage(OpportunityStage stage) {
