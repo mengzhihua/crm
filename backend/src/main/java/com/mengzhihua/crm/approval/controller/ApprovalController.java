@@ -2,6 +2,7 @@ package com.mengzhihua.crm.approval.controller;
 
 import com.mengzhihua.crm.approval.dto.ApprovalDecision;
 import com.mengzhihua.crm.approval.entity.ApprovalRequest;
+import com.mengzhihua.crm.approval.entity.ApprovalStep;
 import com.mengzhihua.crm.approval.service.ApprovalService;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Tag(name = "审批申请")
 @RestController
@@ -53,5 +55,10 @@ public class ApprovalController {
             @Valid @RequestBody ApprovalDecision decision
     ) {
         return Result.ok(approvalService.decide(id, false, decision));
+    }
+
+    @GetMapping("/{id}/steps")
+    public Result<List<ApprovalStep>> steps(@PathVariable Long id) {
+        return Result.ok(approvalService.steps(id));
     }
 }

@@ -192,24 +192,24 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         createRule(
-                "高额报价审批",
+                "大额报价两级审批",
                 new BigDecimal("500000"),
                 null,
-                Role.ADMIN,
+                "SALES_MANAGER,ADMIN",
                 1
         );
         createRule(
                 "销售经理金额审批",
                 new BigDecimal("100000"),
                 null,
-                Role.SALES_MANAGER,
+                "SALES_MANAGER",
                 2
         );
         createRule(
                 "销售经理折扣审批",
                 null,
                 new BigDecimal("20"),
-                Role.SALES_MANAGER,
+                "SALES_MANAGER",
                 3
         );
     }
@@ -218,7 +218,7 @@ public class DataInitializer implements CommandLineRunner {
             String name,
             BigDecimal minAmount,
             BigDecimal minDiscountRate,
-            Role role,
+            String roles,
             int priority
     ) {
         ApprovalRule rule = new ApprovalRule();
@@ -226,7 +226,7 @@ public class DataInitializer implements CommandLineRunner {
         rule.setTargetType(ApprovalTargetType.QUOTE);
         rule.setMinAmount(minAmount);
         rule.setMinDiscountRate(minDiscountRate);
-        rule.setApproverRole(role);
+        rule.setApproverRoles(roles);
         rule.setPriority(priority);
         rule.setActive(true);
         rule.setOwner("admin");

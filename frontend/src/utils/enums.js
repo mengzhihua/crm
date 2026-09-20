@@ -59,6 +59,12 @@ export const maps = {
     APPROVED: "已通过",
     REJECTED: "已驳回",
   },
+  notificationType: {
+    APPROVAL: "审批",
+    CASE: "工单",
+    CONTRACT: "合同",
+    SYSTEM: "系统",
+  },
   role: {
     ADMIN: "管理员",
     SALES_MANAGER: "销售经理",

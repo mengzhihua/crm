@@ -17,6 +17,9 @@ export const menuPermissions = {
   "/forecast": ["ADMIN", "SALES_MANAGER", "SALES_REP"],
   "/sales-targets": ["ADMIN", "SALES_MANAGER"],
   "/settings": ["ADMIN"],
+  "/notifications": ["ADMIN", "SALES_MANAGER", "SALES_REP", "SERVICE_AGENT"],
+  "/audit-logs": ["ADMIN"],
+  "/reports": ["ADMIN", "SALES_MANAGER"],
 };
 
 export const canSee = (path, role) =>
