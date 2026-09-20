@@ -153,10 +153,10 @@ public class ApprovalService {
             boolean approved,
             ApprovalDecision decision
     ) {
-        ApprovalRequest request = requestRepository.findById(id)
+        ApprovalRequest request = requestRepository.findWithLockById(id)
                 .orElseThrow(() -> new BizException("审批申请不存在"));
         if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new BizException("审批申请已处理");
+            throw new BizException("该审批已处理");
         }
         Role role = CurrentUser.role();
         if (role != Role.ADMIN && role != request.getApproverRole()) {
@@ -168,6 +168,9 @@ public class ApprovalService {
                 .filter(item -> item.getStepOrder() == request.getCurrentStep())
                 .findFirst()
                 .orElseThrow(() -> new BizException("审批步骤不存在"));
+        if (step.getStatus() != ApprovalStatus.PENDING) {
+            throw new BizException("该审批已处理");
+        }
         step.setStatus(approved
                 ? ApprovalStatus.APPROVED
                 : ApprovalStatus.REJECTED);

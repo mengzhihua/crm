@@ -73,4 +73,30 @@ class NotificationServiceTest {
                 () -> notificationService.markRead(notification.getId())
         );
     }
+
+    @Test
+    @WithMockUser(username = "manager", roles = "SALES_MANAGER")
+    void marksMoreThanOneHundredUnreadNotifications() {
+        for (int i = 0; i < 101; i++) {
+            notificationService.send(
+                    "manager",
+                    NotificationType.SYSTEM,
+                    "系统通知 " + i,
+                    "内容",
+                    null,
+                    null
+            );
+        }
+
+        assertEquals(101, notificationService.unreadCount());
+        notificationService.markAllRead();
+        assertEquals(0, notificationService.unreadCount());
+        assertEquals(
+                101,
+                notificationRepository.findAll().stream()
+                        .filter(item -> "manager".equals(item.getRecipient()))
+                        .filter(Notification::isRead)
+                        .count()
+        );
+    }
 }

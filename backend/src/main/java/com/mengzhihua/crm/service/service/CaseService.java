@@ -252,16 +252,6 @@ public class CaseService {
             crmCase.setClosedAt(LocalDateTime.now());
         }
         CrmCase saved = caseRepository.save(crmCase);
-        if (saved.getOwner() != null) {
-            notificationService.send(
-                    saved.getOwner(),
-                    NotificationType.CASE,
-                    "工单已分派：" + saved.getSubject(),
-                    "您有一条新的工单待处理",
-                    RelatedType.CASE,
-                    saved.getId()
-            );
-        }
         fieldHistoryService.record(
                 RelatedType.CASE,
                 id,
@@ -302,6 +292,16 @@ public class CaseService {
                         : request.getOwner()
         );
         CrmCase saved = caseRepository.save(crmCase);
+        if (saved.getOwner() != null && !saved.getOwner().trim().isEmpty()) {
+            notificationService.send(
+                    saved.getOwner(),
+                    NotificationType.CASE,
+                    "工单已分派：" + saved.getSubject(),
+                    "您有一条新的工单待处理",
+                    RelatedType.CASE,
+                    saved.getId()
+            );
+        }
         fieldHistoryService.record(
                 RelatedType.CASE,
                 id,

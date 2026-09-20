@@ -50,17 +50,25 @@ public class AuthController {
         try {
             user = userService.findByUsername(request.getUsername());
         } catch (RuntimeException exception) {
-            auditLogService.record("LOGIN_FAILED", request.getUsername(), 401);
+            auditLogService.recordLogin(
+                    "LOGIN_FAILED",
+                    request.getUsername(),
+                    401
+            );
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Result.fail("用户名或密码错误"));
         }
         if (!user.isEnabled()
                 || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            auditLogService.record("LOGIN_FAILED", request.getUsername(), 401);
+            auditLogService.recordLogin(
+                    "LOGIN_FAILED",
+                    request.getUsername(),
+                    401
+            );
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Result.fail("用户名或密码错误"));
         }
-        auditLogService.record("LOGIN", user.getUsername(), 200);
+        auditLogService.recordLogin("LOGIN", user.getUsername(), 200);
         return ResponseEntity.ok(Result.ok(new LoginResponse(
                 tokenService.create(user),
                 user

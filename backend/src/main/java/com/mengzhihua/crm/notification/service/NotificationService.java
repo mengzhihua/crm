@@ -113,12 +113,10 @@ public class NotificationService {
 
     @Transactional
     public void markAllRead() {
-        PageResult<Notification> page = list(1, 10000, true);
-        for (Notification notification : page.getRecords()) {
-            notification.setRead(true);
-            notification.setReadAt(LocalDateTime.now());
-            notificationRepository.save(notification);
-        }
+        notificationRepository.markAllRead(
+                CurrentUser.usernameOrDefault(),
+                LocalDateTime.now()
+        );
     }
 
     private Notification owned(Long id) {

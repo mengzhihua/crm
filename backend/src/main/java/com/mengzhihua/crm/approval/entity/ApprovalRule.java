@@ -27,7 +27,6 @@ public class ApprovalRule extends BaseEntity {
     private ApprovalTargetType targetType = ApprovalTargetType.QUOTE;
     private BigDecimal minAmount;
     private BigDecimal minDiscountRate;
-    @Column(nullable = false)
     private String approverRoles;
     @Column(nullable = false)
     private int priority;

@@ -48,6 +48,8 @@ import com.mengzhihua.crm.service.service.CaseService;
 import com.mengzhihua.crm.service.service.KnowledgeService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -57,6 +59,7 @@ import java.time.LocalDateTime;
 
 @Component
 @Profile("!test")
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class DataInitializer implements CommandLineRunner {
     private final AccountRepository accountRepository;
     private final LeadRepository leadRepository;
