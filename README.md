@@ -36,3 +36,42 @@ bash scripts/smoke.sh
 ## 后续规划
 
 报价单、产品与价格手册、审批流、角色权限、通知中心、报表导出与多租户能力。
+
+## 发布包（开箱即用）
+
+前端生产构建打进 Spring Boot 可执行 JAR。三种用法：
+
+### 1. 服务端（任意已装 JDK 17 的机器）
+
+```bash
+java -jar crm-backend-1.0.0.jar --server.port=8091
+```
+
+Linux systemd 示例见发布包 `README.txt`。
+
+### 2. 便携包（需本机已装 Java）
+
+```bash
+bash scripts/package-release.sh
+unzip release/crm-1.0.0.zip
+cd crm-1.0.0
+```
+
+| 系统 | 怎么用 |
+| --- | --- |
+| Linux | `./start.sh` |
+| macOS | 双击 `start.command`，或 `./start.sh` |
+| Windows | 双击 `start.bat` |
+
+### 3. 原生包（捆绑 JRE，不必装 Java）
+
+合并到默认分支且便携包冒烟通过后，GitHub Actions 自动发布 GitHub Release（也可在 Actions 里手动 `workflow_dispatch`）。分别在 Ubuntu / Windows / macOS 生成：
+
+- `crm-1.0.0-linux-x64.zip` → `bin/crm`
+- `crm-1.0.0-windows-x64.zip` → 双击 `crm.exe`
+- `crm-1.0.0-macos-x64.zip` → 双击 `crm.app`
+
+浏览器访问 `http://127.0.0.1:8091`。本系统无登录页，打开即可用。
+
+十二套系统可同时启动：OMS 8081 / WMS 8082 / TMS 8083 / BMS 8084 / SAP 8085 / OA 8086 / SRM 8087 / BOM 8088 / INV 8089 / IR 8090 / CRM 8091 / DMS 8092。
+

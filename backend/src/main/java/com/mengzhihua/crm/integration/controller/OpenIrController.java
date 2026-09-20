@@ -1,4 +1,4 @@
-package com.mengzhihua.crm.integration;
+package com.mengzhihua.crm.integration.controller;
 
 import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.Result;
