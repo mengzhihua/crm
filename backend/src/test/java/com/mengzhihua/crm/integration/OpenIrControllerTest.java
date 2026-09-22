@@ -69,6 +69,7 @@ class OpenIrControllerTest {
                     return created;
                 });
         crmCase.setStatus(CaseStatus.NEW);
+        crmCase.setPriority(CasePriority.MEDIUM);
         caseService.save(crmCase);
     }
 
@@ -117,9 +118,20 @@ class OpenIrControllerTest {
         mockMvc.perform(post("/api/open/ir/actions")
                         .header("X-Api-Key", "crm-open-key")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"CRM_ESCALATE_CASE\",\"targetKey\":\"CS-IR-NEW\"}"))
+                        .content("{\"type\":\"CRM_ESCALATE_CASE\",\"targetKey\":\"CS-IR-NEW\","
+                                + "\"idempotencyKey\":\"CRM-ESC-1\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.status").value("ESCALATED"));
+                .andExpect(jsonPath("$.data.status").value("ESCALATED"))
+                .andExpect(jsonPath("$.data.priority").value("HIGH"));
+        mockMvc.perform(post("/api/open/ir/actions")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"CRM_ESCALATE_CASE\",\"targetKey\":\"CS-IR-NEW\","
+                                + "\"idempotencyKey\":\"CRM-ESC-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value("ESCALATED"))
+                .andExpect(jsonPath("$.data.priority").value("HIGH"));
     }
 }
