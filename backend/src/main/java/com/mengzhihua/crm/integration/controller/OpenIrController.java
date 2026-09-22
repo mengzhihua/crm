@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /** IR 控制塔：商机 / 工单快照，推进商机阶段或升级工单。 */
 @RestController
@@ -33,6 +35,7 @@ public class OpenIrController {
     private final CrmCaseRepository cases;
     private final CaseService caseService;
     private final String apiKey;
+    private final ConcurrentHashMap<String, Object> actionCache = new ConcurrentHashMap<String, Object>();
 
     public OpenIrController(
             OpportunityRepository opportunities,
@@ -76,22 +79,54 @@ public class OpenIrController {
         checkKey(key);
         String type = String.valueOf(body.getOrDefault("type", ""));
         String targetKey = String.valueOf(body.getOrDefault("targetKey", ""));
-        if ("CRM_ADVANCE_STAGE".equals(type)) {
-            Opportunity opportunity = opportunityOf(targetKey);
-            OpportunityStage next = nextStage(opportunity.getStage());
-            OpportunityStageRequest request = new OpportunityStageRequest();
-            request.setStage(next);
-            return Result.ok(opportunityService.changeStage(opportunity.getId(), request));
+        return Result.ok(executeOnce(cacheKey(type, targetKey, body.get("idempotencyKey")), () -> {
+            if ("CRM_ADVANCE_STAGE".equals(type)) {
+                Opportunity opportunity = opportunityOf(targetKey);
+                OpportunityStage next = nextStage(opportunity.getStage());
+                OpportunityStageRequest request = new OpportunityStageRequest();
+                request.setStage(next);
+                return opportunityService.changeStage(opportunity.getId(), request);
+            }
+            if ("CRM_ESCALATE_CASE".equals(type)) {
+                CrmCase crmCase = cases.findAll().stream()
+                        .filter(item -> targetKey.equals(item.getCaseNo())
+                                || targetKey.equals(String.valueOf(item.getId())))
+                        .findFirst()
+                        .orElseThrow(() -> new BizException("工单不存在: " + targetKey));
+                return caseService.escalate(crmCase.getId());
+            }
+            throw new BizException("不支持的 IR 指令: " + type);
+        }));
+    }
+
+    private Object executeOnce(String cacheKey, Supplier<Object> work) {
+        if (cacheKey == null) {
+            return work.get();
         }
-        if ("CRM_ESCALATE_CASE".equals(type)) {
-            CrmCase crmCase = cases.findAll().stream()
-                    .filter(item -> targetKey.equals(item.getCaseNo())
-                            || targetKey.equals(String.valueOf(item.getId())))
-                    .findFirst()
-                    .orElseThrow(() -> new BizException("工单不存在: " + targetKey));
-            return Result.ok(caseService.escalate(crmCase.getId()));
+        Object cached = actionCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
         }
-        throw new BizException("不支持的 IR 指令: " + type);
+        synchronized (actionCache) {
+            cached = actionCache.get(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
+            Object created = work.get();
+            actionCache.put(cacheKey, created);
+            return created;
+        }
+    }
+
+    private static String cacheKey(String type, String targetKey, Object idempotencyKey) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        String key = String.valueOf(idempotencyKey).trim();
+        if (key.isEmpty() || "null".equals(key)) {
+            return null;
+        }
+        return type + "|" + (targetKey == null ? "" : targetKey) + "|" + key;
     }
 
     private Opportunity opportunityOf(String targetKey) {
