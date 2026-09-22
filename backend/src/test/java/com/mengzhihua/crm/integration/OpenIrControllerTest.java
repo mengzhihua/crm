@@ -100,7 +100,16 @@ class OpenIrControllerTest {
         mockMvc.perform(post("/api/open/ir/actions")
                         .header("X-Api-Key", "crm-open-key")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"CRM_ADVANCE_STAGE\",\"targetKey\":\"IR-OPP-QUAL\"}"))
+                        .content("{\"type\":\"CRM_ADVANCE_STAGE\",\"targetKey\":\"IR-OPP-QUAL\","
+                                + "\"idempotencyKey\":\"CRM-ADV-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.stage").value("NEEDS_ANALYSIS"));
+        mockMvc.perform(post("/api/open/ir/actions")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"CRM_ADVANCE_STAGE\",\"targetKey\":\"IR-OPP-QUAL\","
+                                + "\"idempotencyKey\":\"CRM-ADV-1\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.stage").value("NEEDS_ANALYSIS"));
