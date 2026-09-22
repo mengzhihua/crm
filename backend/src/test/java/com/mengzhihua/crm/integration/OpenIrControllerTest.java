@@ -133,5 +133,21 @@ class OpenIrControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.status").value("ESCALATED"))
                 .andExpect(jsonPath("$.data.priority").value("HIGH"));
+
+        mockMvc.perform(post("/api/open/ir/advance-stage")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"opportunityId\":\"IR-OPP-QUAL\",\"idempotencyKey\":\"CRM-ADV-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.stage").value("NEEDS_ANALYSIS"));
+        mockMvc.perform(post("/api/open/ir/escalate-case")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"caseNo\":\"CS-IR-NEW\",\"idempotencyKey\":\"CRM-ESC-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.status").value("ESCALATED"))
+                .andExpect(jsonPath("$.data.priority").value("HIGH"));
     }
 }
