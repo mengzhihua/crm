@@ -150,4 +150,59 @@ class OpenIrControllerTest {
                 .andExpect(jsonPath("$.data.status").value("ESCALATED"))
                 .andExpect(jsonPath("$.data.priority").value("HIGH"));
     }
+
+    @Test
+    void closeWonAndLostDoNotReuseAdvance() throws Exception {
+        Opportunity negotiation = opportunities.findAll().stream()
+                .filter(item -> "IR-OPP-NEG".equals(item.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Opportunity created = new Opportunity();
+                    created.setName("IR-OPP-NEG");
+                    created.setAmount(new BigDecimal("800000"));
+                    return created;
+                });
+        negotiation.setStage(OpportunityStage.NEGOTIATION);
+        negotiation.setLostReason(null);
+        opportunities.save(negotiation);
+
+        mockMvc.perform(post("/api/open/ir/advance-stage")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"opportunityId\":\"IR-OPP-NEG\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/open/ir/close-won")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"opportunityId\":\"IR-OPP-NEG\",\"idempotencyKey\":\"CRM-WON-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.stage").value("CLOSED_WON"));
+
+        Opportunity lost = opportunities.findAll().stream()
+                .filter(item -> "IR-OPP-LOST".equals(item.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Opportunity created = new Opportunity();
+                    created.setName("IR-OPP-LOST");
+                    created.setAmount(new BigDecimal("100000"));
+                    return created;
+                });
+        lost.setStage(OpportunityStage.NEGOTIATION);
+        opportunities.save(lost);
+
+        mockMvc.perform(post("/api/open/ir/close-lost")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"opportunityId\":\"IR-OPP-LOST\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/open/ir/close-lost")
+                        .header("X-Api-Key", "crm-open-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"opportunityId\":\"IR-OPP-LOST\",\"lostReason\":\"价格\",\"idempotencyKey\":\"CRM-LOST-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.stage").value("CLOSED_LOST"));
+    }
 }
