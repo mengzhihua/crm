@@ -37,6 +37,12 @@ bash scripts/smoke.sh
 
 报价单、产品与价格手册、审批流、角色权限、通知中心、报表导出与多租户能力。
 
+## 控制塔对接
+
+商机和工单快照，以及推进阶段、升级工单，见 [技术方案](docs/技术方案.md)。
+
+这些指令必须带 API Key：`/api/open/ir/snapshots`、`/actions`、`/advance-stage`、`/escalate-case`。下一阶段和下一优先级由本系统计算。控制塔登录模式不调用本系统。
+
 ## 发布包（开箱即用）
 
 前端生产构建打进 Spring Boot 可执行 JAR。三种用法：
