@@ -87,6 +87,17 @@ public class OpenIrController {
                 request.setStage(next);
                 return opportunityService.changeStage(opportunity.getId(), request);
             }
+            if ("CRM_CLOSE_WON".equals(type) || "CRM_CLOSE_LOST".equals(type)) {
+                Opportunity opportunity = opportunityOf(targetKey);
+                OpportunityStageRequest request = new OpportunityStageRequest();
+                request.setStage("CRM_CLOSE_WON".equals(type)
+                        ? OpportunityStage.CLOSED_WON
+                        : OpportunityStage.CLOSED_LOST);
+                if (body.get("lostReason") != null) {
+                    request.setLostReason(String.valueOf(body.get("lostReason")));
+                }
+                return opportunityService.changeStage(opportunity.getId(), request);
+            }
             if ("CRM_ESCALATE_CASE".equals(type)) {
                 CrmCase crmCase = cases.findAll().stream()
                         .filter(item -> targetKey.equals(item.getCaseNo())
@@ -111,6 +122,20 @@ public class OpenIrController {
             @RequestHeader(value = "X-Api-Key", required = false) String key,
             @RequestBody Map<String, Object> body) {
         return typedAction(key, body, "CRM_ESCALATE_CASE", "caseNo");
+    }
+
+    @PostMapping("/close-won")
+    public Result<Object> closeWon(
+            @RequestHeader(value = "X-Api-Key", required = false) String key,
+            @RequestBody Map<String, Object> body) {
+        return typedAction(key, body, "CRM_CLOSE_WON", "opportunityId");
+    }
+
+    @PostMapping("/close-lost")
+    public Result<Object> closeLost(
+            @RequestHeader(value = "X-Api-Key", required = false) String key,
+            @RequestBody Map<String, Object> body) {
+        return typedAction(key, body, "CRM_CLOSE_LOST", "opportunityId");
     }
 
     private Result<Object> typedAction(
@@ -192,10 +217,7 @@ public class OpenIrController {
         if (stage == OpportunityStage.PROPOSAL) {
             return OpportunityStage.NEGOTIATION;
         }
-        if (stage == OpportunityStage.NEGOTIATION) {
-            return OpportunityStage.CLOSED_WON;
-        }
-        throw new BizException("商机已关闭，无法推进");
+        throw new BizException("商机谈判之后请使用赢单或丢单，无法再推进阶段");
     }
 
     private void checkKey(String key) {
