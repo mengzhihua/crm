@@ -2,6 +2,8 @@
 
 一个面向销售与客户服务团队的轻量 CRM，参考 Salesforce Sales Cloud 与 Service Cloud 的对象模型，覆盖线索、客户、联系人、商机、活动、服务工单与知识库。
 
+项目亮点见 [docs/项目亮点.md](docs/项目亮点.md)。
+
 ## 对象映射
 
 | CRM 对象 | 本系统模块 |
