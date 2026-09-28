@@ -5,6 +5,8 @@ import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.RelatedType;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.sales.dto.OpportunityStageRequest;
 import com.mengzhihua.crm.sales.entity.Opportunity;
@@ -26,13 +28,16 @@ import java.util.Objects;
 public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final FieldHistoryService fieldHistoryService;
+    private final DataScopeService dataScopeService;
 
     public OpportunityService(
             OpportunityRepository opportunityRepository,
-            FieldHistoryService fieldHistoryService
+            FieldHistoryService fieldHistoryService,
+            DataScopeService dataScopeService
     ) {
         this.opportunityRepository = opportunityRepository;
         this.fieldHistoryService = fieldHistoryService;
+        this.dataScopeService = dataScopeService;
     }
 
     public PageResult<Opportunity> list(
@@ -56,7 +61,11 @@ public class OpportunityService {
             if (stage != null) {
                 predicates.add(builder.equal(root.get("stage"), stage));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    builder.and(predicates.toArray(new Predicate[0])),
+                    dataScopeService.<Opportunity>scope(DataObjectType.OPPORTUNITY)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<Opportunity> result = opportunityRepository.findAll(
                 specification,
@@ -66,11 +75,26 @@ public class OpportunityService {
     }
 
     public Opportunity get(Long id) {
-        return opportunityRepository.findById(id)
+        Opportunity opportunity = opportunityRepository.findById(id)
                 .orElseThrow(() -> new BizException("商机不存在"));
+        dataScopeService.checkRead(
+                DataObjectType.OPPORTUNITY,
+                opportunity.getOwner(),
+                id
+        );
+        return opportunity;
     }
 
     public Opportunity save(Opportunity opportunity) {
+        if (opportunity.getId() != null) {
+            Opportunity current = get(opportunity.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.OPPORTUNITY,
+                    current.getOwner(),
+                    opportunity.getId()
+            );
+            opportunity.setOwner(current.getOwner());
+        }
         if (opportunity.getStage() == null) {
             opportunity.setStage(OpportunityStage.QUALIFICATION);
         }
@@ -83,6 +107,12 @@ public class OpportunityService {
     }
 
     public void delete(Long id) {
+        Opportunity opportunity = get(id);
+        dataScopeService.checkEdit(
+                DataObjectType.OPPORTUNITY,
+                opportunity.getOwner(),
+                id
+        );
         opportunityRepository.deleteById(id);
     }
 

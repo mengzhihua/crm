@@ -20,6 +20,8 @@ import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.Rating;
 import com.mengzhihua.crm.common.enums.Role;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.common.enums.DataScope;
 import com.mengzhihua.crm.marketing.entity.Campaign;
 import com.mengzhihua.crm.marketing.entity.CampaignMember;
 import com.mengzhihua.crm.marketing.repository.CampaignMemberRepository;
@@ -46,6 +48,8 @@ import com.mengzhihua.crm.service.repository.AssignmentRuleRepository;
 import com.mengzhihua.crm.service.repository.SlaPolicyRepository;
 import com.mengzhihua.crm.service.service.CaseService;
 import com.mengzhihua.crm.service.service.KnowledgeService;
+import com.mengzhihua.crm.permission.entity.RoleDataScope;
+import com.mengzhihua.crm.permission.repository.RoleDataScopeRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
@@ -77,6 +81,7 @@ public class DataInitializer implements CommandLineRunner {
     private final SalesTargetRepository salesTargetRepository;
     private final SlaPolicyRepository slaPolicyRepository;
     private final AssignmentRuleRepository assignmentRuleRepository;
+    private final RoleDataScopeRepository roleDataScopeRepository;
 
     public DataInitializer(
             AccountRepository accountRepository,
@@ -94,7 +99,8 @@ public class DataInitializer implements CommandLineRunner {
             CampaignMemberRepository campaignMemberRepository,
             SalesTargetRepository salesTargetRepository,
             SlaPolicyRepository slaPolicyRepository,
-            AssignmentRuleRepository assignmentRuleRepository
+            AssignmentRuleRepository assignmentRuleRepository,
+            RoleDataScopeRepository roleDataScopeRepository
     ) {
         this.accountRepository = accountRepository;
         this.leadRepository = leadRepository;
@@ -112,11 +118,13 @@ public class DataInitializer implements CommandLineRunner {
         this.salesTargetRepository = salesTargetRepository;
         this.slaPolicyRepository = slaPolicyRepository;
         this.assignmentRuleRepository = assignmentRuleRepository;
+        this.roleDataScopeRepository = roleDataScopeRepository;
     }
 
     @Override
     public void run(String... args) {
         createUsers();
+        createRoleScopes();
         createCatalog();
         createApprovalRules();
         if (accountRepository.count() > 0) {
@@ -134,25 +142,57 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.count() > 0) {
             return;
         }
-        createUser("admin", "admin123", "系统管理员", Role.ADMIN);
-        createUser("manager", "123456", "销售经理", Role.SALES_MANAGER);
-        createUser("sales", "123456", "销售代表", Role.SALES_REP);
-        createUser("service", "123456", "服务专员", Role.SERVICE_AGENT);
+        createUser("admin", "admin123", "系统管理员", Role.ADMIN, null);
+        createUser("manager", "123456", "销售经理", Role.SALES_MANAGER, "华东销售");
+        createUser("sales", "123456", "销售代表", Role.SALES_REP, "华东销售");
+        createUser("service", "123456", "服务专员", Role.SERVICE_AGENT, "客服一组");
     }
 
     private void createUser(
             String username,
             String password,
             String displayName,
-            Role role
+            Role role,
+            String team
     ) {
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setDisplayName(displayName);
         user.setRole(role);
+        user.setTeam(team);
         user.setOwner(username);
         userRepository.save(user);
+    }
+
+    private void createRoleScopes() {
+        if (roleDataScopeRepository.count() > 0) {
+            return;
+        }
+        for (Role role : Role.values()) {
+            for (DataObjectType objectType : DataObjectType.values()) {
+                DataScope scope = DataScope.ALL;
+                if (role == Role.SALES_MANAGER) {
+                    scope = DataScope.TEAM;
+                } else if (role == Role.SALES_REP) {
+                    scope = objectType == DataObjectType.ACCOUNT
+                            || objectType == DataObjectType.CONTACT
+                            ? DataScope.TEAM
+                            : DataScope.OWN;
+                } else if (role == Role.SERVICE_AGENT) {
+                    scope = objectType == DataObjectType.ACCOUNT
+                            || objectType == DataObjectType.CONTACT
+                            ? DataScope.ALL
+                            : DataScope.OWN;
+                }
+                RoleDataScope item = new RoleDataScope();
+                item.setRole(role);
+                item.setObjectType(objectType);
+                item.setScope(scope);
+                item.setOwner("admin");
+                roleDataScopeRepository.save(item);
+            }
+        }
     }
 
     private void createCatalog() {

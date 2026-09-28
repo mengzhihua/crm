@@ -27,11 +27,11 @@
             <template #reference>
               <el-button circle>🔔</el-button>
             </template>
-            <div v-for="item in unreadItems" :key="item.id" class="notify-item">
+            <div v-for="item in recentNotifications" :key="item.id" class="notify-item">
               <strong>{{ item.title }}</strong>
               <small>{{ formatTime(item.createdAt) }}</small>
             </div>
-            <el-empty v-if="!unreadItems.length" description="暂无未读通知" />
+            <el-empty v-if="!recentNotifications.length" description="暂无未读通知" />
             <div class="notify-actions">
               <el-button link @click="markAllRead">全部标为已读</el-button>
               <el-button link type="primary" @click="router.push('/notifications')">
@@ -65,7 +65,11 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { maps } from "./utils/enums";
 import { notifications, search } from "./api";
-import { refreshUnread, unreadCount } from "./utils/notify";
+import {
+  recentNotifications,
+  refreshNotifications,
+  unreadCount,
+} from "./utils/notify";
 import { canSee, currentUser, menuPermissions } from "./utils/permission";
 
 const titles = reactive({
@@ -90,6 +94,8 @@ const titles = reactive({
   "/notifications": "通知中心",
   "/audit-logs": "操作审计",
   "/reports": "报表中心",
+  "/data-permissions": "数据权限",
+  "/channels": "消息渠道",
 });
 
 const router = useRouter();
@@ -99,32 +105,27 @@ watch(
   () => route.path,
   () => {
     user.value = currentUser();
-    if (route.path !== "/login") {
+    if (route.path !== "/login" && localStorage.getItem("crm_token")) {
       startPolling();
+    } else {
+      stopPolling();
     }
   },
 );
 const searchText = ref("");
-const unreadItems = ref([]);
 let notificationTimer;
 const loadNotifications = async () => {
-  try {
-    await refreshUnread();
-    unreadItems.value = (await notifications.list({
-      page: 1,
-      size: 5,
-      unreadOnly: true,
-    })).records;
-  } catch {
-    await refreshUnread();
-    unreadItems.value = [];
-  }
+  await refreshNotifications();
 };
 const startPolling = () => {
   loadNotifications();
   if (!notificationTimer) {
     notificationTimer = window.setInterval(loadNotifications, 60000);
   }
+};
+const stopPolling = () => {
+  window.clearInterval(notificationTimer);
+  notificationTimer = undefined;
 };
 const markAllRead = async () => {
   await notifications.markAllRead();
@@ -153,6 +154,8 @@ const menuLabels = {
   "/notifications": "通知",
   "/audit-logs": "操作审计",
   "/reports": "报表中心",
+  "/data-permissions": "数据权限",
+  "/channels": "消息渠道",
 };
 const visibleMenus = computed(() =>
   Object.keys(menuPermissions)
@@ -161,8 +164,7 @@ const visibleMenus = computed(() =>
 );
 const roleText = (role) => maps.role[role] || role || "";
 const logout = () => {
-  window.clearInterval(notificationTimer);
-  notificationTimer = undefined;
+  stopPolling();
   localStorage.removeItem("crm_token");
   localStorage.removeItem("crm_user");
   router.push("/login");
@@ -194,9 +196,9 @@ const openSearch = (item) => {
   router.push(paths[item.record.type] || "/dashboard");
 };
 onMounted(() => {
-  if (route.path !== "/login") {
+  if (route.path !== "/login" && localStorage.getItem("crm_token")) {
     startPolling();
   }
 });
-onUnmounted(() => window.clearInterval(notificationTimer));
+onUnmounted(stopPolling);
 </script>

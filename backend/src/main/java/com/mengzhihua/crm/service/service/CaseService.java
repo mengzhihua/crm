@@ -12,7 +12,9 @@ import com.mengzhihua.crm.common.enums.CaseType;
 import com.mengzhihua.crm.common.enums.RelatedType;
 import com.mengzhihua.crm.common.enums.NotificationType;
 import com.mengzhihua.crm.common.enums.Role;
+import com.mengzhihua.crm.common.enums.DataObjectType;
 import com.mengzhihua.crm.notification.service.NotificationService;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.service.dto.CaseSurveyRequest;
 import com.mengzhihua.crm.service.entity.AssignmentRule;
@@ -61,6 +63,7 @@ public class CaseService {
     private final CaseArticleLinkRepository articleLinkRepository;
     private final FieldHistoryService fieldHistoryService;
     private final NotificationService notificationService;
+    private final DataScopeService dataScopeService;
 
     public CaseService(
             CrmCaseRepository caseRepository,
@@ -70,7 +73,8 @@ public class CaseService {
             CaseSurveyRepository surveyRepository,
             CaseArticleLinkRepository articleLinkRepository,
             FieldHistoryService fieldHistoryService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            DataScopeService dataScopeService
     ) {
         this.caseRepository = caseRepository;
         this.commentRepository = commentRepository;
@@ -80,6 +84,7 @@ public class CaseService {
         this.articleLinkRepository = articleLinkRepository;
         this.fieldHistoryService = fieldHistoryService;
         this.notificationService = notificationService;
+        this.dataScopeService = dataScopeService;
     }
 
     private static Map<CaseStatus, Set<CaseStatus>> createTransitions() {
@@ -154,7 +159,11 @@ public class CaseService {
                         CaseStatus.CLOSED
                 ));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    builder.and(predicates.toArray(new Predicate[0])),
+                    dataScopeService.<CrmCase>scope(DataObjectType.CASE)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<CrmCase> result = caseRepository.findAll(
                 specification,
@@ -164,11 +173,22 @@ public class CaseService {
     }
 
     public CrmCase get(Long id) {
-        return caseRepository.findById(id)
+        CrmCase crmCase = caseRepository.findById(id)
                 .orElseThrow(() -> new BizException("工单不存在"));
+        dataScopeService.checkRead(DataObjectType.CASE, crmCase.getOwner(), id);
+        return crmCase;
     }
 
     public CrmCase save(CrmCase crmCase) {
+        if (crmCase.getId() != null) {
+            CrmCase current = get(crmCase.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.CASE,
+                    current.getOwner(),
+                    crmCase.getId()
+            );
+            crmCase.setOwner(current.getOwner());
+        }
         if (crmCase.getStatus() == null) {
             crmCase.setStatus(CaseStatus.NEW);
         }
@@ -223,6 +243,8 @@ public class CaseService {
     }
 
     public void delete(Long id) {
+        CrmCase crmCase = get(id);
+        dataScopeService.checkEdit(DataObjectType.CASE, crmCase.getOwner(), id);
         caseRepository.deleteById(id);
     }
 

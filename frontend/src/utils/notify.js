@@ -2,12 +2,27 @@ import { ref } from "vue";
 import { notifications } from "../api";
 
 export const unreadCount = ref(0);
+export const recentNotifications = ref([]);
+let requestSequence = 0;
 
-export const refreshUnread = async () => {
+export const refreshNotifications = async () => {
+  const sequence = ++requestSequence;
   try {
-    unreadCount.value = await notifications.unreadCount();
+    const [count, list] = await Promise.all([
+      notifications.unreadCount(),
+      notifications.list({ page: 1, size: 5, unreadOnly: true }),
+    ]);
+    if (sequence === requestSequence) {
+      unreadCount.value = count;
+      recentNotifications.value = list.records || [];
+    }
   } catch {
-    unreadCount.value = 0;
+    if (sequence === requestSequence) {
+      unreadCount.value = 0;
+      recentNotifications.value = [];
+    }
   }
   return unreadCount.value;
 };
+
+export const refreshUnread = refreshNotifications;

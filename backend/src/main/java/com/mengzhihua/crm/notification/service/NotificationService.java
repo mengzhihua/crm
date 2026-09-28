@@ -10,6 +10,7 @@ import com.mengzhihua.crm.common.enums.RelatedType;
 import com.mengzhihua.crm.common.enums.Role;
 import com.mengzhihua.crm.notification.entity.Notification;
 import com.mengzhihua.crm.notification.repository.NotificationRepository;
+import com.mengzhihua.crm.channel.service.ChannelDispatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,16 @@ import java.util.List;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final ChannelDispatcher channelDispatcher;
 
     public NotificationService(
             NotificationRepository notificationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ChannelDispatcher channelDispatcher
     ) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.channelDispatcher = channelDispatcher;
     }
 
     @Transactional
@@ -50,7 +54,9 @@ public class NotificationService {
         notification.setRelatedType(relatedType);
         notification.setRelatedId(relatedId);
         notification.setRead(false);
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        channelDispatcher.dispatch(saved);
+        return saved;
     }
 
     @Transactional

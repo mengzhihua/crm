@@ -41,6 +41,8 @@
             ><el-button link type="primary" @click="advance(row)"
               >推进阶段</el-button
             ><el-button link @click="open(row)">编辑</el-button
+            ><el-button link @click="shareDialog.open('OPPORTUNITY', row.id)"
+              >共享</el-button
             ><el-button link type="danger" @click="remove(row)"
               >删除</el-button
             ></template
@@ -134,6 +136,7 @@
         ><el-button type="primary" @click="saveStage">保存</el-button></template
       >
     </el-dialog>
+    <ShareDialog ref="shareDialog" />
   </div>
 </template>
 
@@ -142,6 +145,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { accounts, exportCsv, opportunities } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import ShareDialog from "../../components/ShareDialog.vue";
 
 const rows = ref([]);
 const accountsRows = ref([]);
@@ -156,6 +160,7 @@ const stageVisible = ref(false);
 const editingId = ref();
 const stageId = ref();
 const formRef = ref();
+const shareDialog = ref();
 const stageRef = ref();
 const form = reactive({});
 const stageForm = reactive({});

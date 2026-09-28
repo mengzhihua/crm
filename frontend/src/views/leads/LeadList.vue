@@ -38,6 +38,9 @@
             <el-button link type="success" @click="convert(row)"
               >转化</el-button
             >
+            <el-button link @click="shareDialog.open('LEAD', row.id)"
+              >共享</el-button
+            >
             <el-button link type="danger" @click="remove(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -101,6 +104,7 @@
         ></template
       >
     </el-dialog>
+    <ShareDialog ref="shareDialog" />
   </div>
 </template>
 
@@ -109,6 +113,7 @@ import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { exportCsv, leads } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import ShareDialog from "../../components/ShareDialog.vue";
 
 const rows = ref([]);
 const total = ref(0);
@@ -120,6 +125,7 @@ const formRef = ref();
 const editingId = ref();
 const form = reactive({});
 const convertForm = reactive({ createOpportunity: true });
+const shareDialog = ref();
 const filters = reactive({ keyword: "", status: "" });
 const rules = {
   name: [{ required: true, message: "请输入姓名", trigger: "blur" }],

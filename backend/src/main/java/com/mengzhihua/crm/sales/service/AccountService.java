@@ -7,6 +7,8 @@ import com.mengzhihua.crm.sales.entity.Account;
 import com.mengzhihua.crm.sales.repository.AccountRepository;
 import com.mengzhihua.crm.sales.repository.ContactRepository;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import com.mengzhihua.crm.service.repository.CrmCaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,17 +26,20 @@ public class AccountService {
     private final ContactRepository contactRepository;
     private final OpportunityRepository opportunityRepository;
     private final CrmCaseRepository caseRepository;
+    private final DataScopeService dataScopeService;
 
     public AccountService(
             AccountRepository accountRepository,
             ContactRepository contactRepository,
             OpportunityRepository opportunityRepository,
-            CrmCaseRepository caseRepository
+            CrmCaseRepository caseRepository,
+            DataScopeService dataScopeService
     ) {
         this.accountRepository = accountRepository;
         this.contactRepository = contactRepository;
         this.opportunityRepository = opportunityRepository;
         this.caseRepository = caseRepository;
+        this.dataScopeService = dataScopeService;
     }
 
     public PageResult<Account> list(int page, int size, String keyword) {
@@ -46,7 +51,11 @@ public class AccountService {
                         "%" + keyword.trim().toLowerCase() + "%"
                 ));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    builder.and(predicates.toArray(new Predicate[0])),
+                    dataScopeService.<Account>scope(DataObjectType.ACCOUNT)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<Account> result = accountRepository.findAll(
                 specification,
@@ -56,11 +65,22 @@ public class AccountService {
     }
 
     public Account get(Long id) {
-        return accountRepository.findById(id)
+        Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new BizException("客户不存在"));
+        dataScopeService.checkRead(DataObjectType.ACCOUNT, account.getOwner(), id);
+        return account;
     }
 
     public Account save(Account account) {
+        if (account.getId() != null) {
+            Account current = get(account.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.ACCOUNT,
+                    current.getOwner(),
+                    account.getId()
+            );
+            account.setOwner(current.getOwner());
+        }
         if (account.getName() == null || account.getName().trim().isEmpty()) {
             throw new BizException("客户名称不能为空");
         }
@@ -72,6 +92,8 @@ public class AccountService {
     }
 
     public void delete(Long id) {
+        Account account = get(id);
+        dataScopeService.checkEdit(DataObjectType.ACCOUNT, account.getOwner(), id);
         accountRepository.deleteById(id);
     }
 

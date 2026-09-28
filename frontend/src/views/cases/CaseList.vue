@@ -53,6 +53,8 @@
               @click="$router.push(`/cases/${row.id}`)"
               >详情</el-button
             ><el-button link @click="open(row)">编辑</el-button
+            ><el-button link @click="shareDialog.open('CASE', row.id)"
+              >共享</el-button
             ><el-button link type="danger" @click="remove(row)"
               >删除</el-button
             ></template
@@ -97,6 +99,7 @@
         ><el-button type="primary" @click="save">保存</el-button></template
       >
     </el-dialog>
+    <ShareDialog ref="shareDialog" />
   </div>
 </template>
 
@@ -105,6 +108,7 @@ import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { cases, exportCsv } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import ShareDialog from "../../components/ShareDialog.vue";
 
 const rows = ref([]);
 const total = ref(0);
@@ -117,6 +121,7 @@ const overdue = ref(false);
 const visible = ref(false);
 const editingId = ref();
 const formRef = ref();
+const shareDialog = ref();
 const form = reactive({});
 const rules = {
   subject: [{ required: true, message: "请输入主题", trigger: "blur" }],

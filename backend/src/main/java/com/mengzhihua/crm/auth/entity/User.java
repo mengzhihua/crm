@@ -28,4 +28,5 @@ public class User extends BaseEntity {
     private boolean enabled = true;
     private String email;
     private String phone;
+    private String team;
 }

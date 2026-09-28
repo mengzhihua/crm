@@ -33,9 +33,11 @@
           <el-button link type="primary" @click="$router.push(`/contracts/${row.id}`)">
             详情
           </el-button>
+          <el-button link @click="shareDialog.open('CONTRACT', row.id)">共享</el-button>
         </template>
       </el-table-column>
     </el-table>
+    <ShareDialog ref="shareDialog" />
     <el-pagination
       v-model:current-page="page"
       v-model:page-size="size"
@@ -50,6 +52,7 @@
 import { onMounted, ref } from "vue";
 import { contracts, exportCsv } from "../../api";
 import { maps, tagType, text } from "../../utils/enums";
+import ShareDialog from "../../components/ShareDialog.vue";
 
 const records = ref([]);
 const page = ref(1);
@@ -57,6 +60,7 @@ const size = ref(10);
 const total = ref(0);
 const keyword = ref("");
 const status = ref("");
+const shareDialog = ref();
 const load = async () => {
   const data = await contracts.list({
     page: page.value,

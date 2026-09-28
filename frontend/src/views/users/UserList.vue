@@ -7,6 +7,7 @@
     <el-table :data="rows" stripe>
       <el-table-column prop="username" label="用户名" />
       <el-table-column prop="displayName" label="姓名" />
+      <el-table-column prop="team" label="团队" />
       <el-table-column label="角色">
         <template #default="{ row }">
           <el-tag :type="tagType(row.role)">{{ text(maps.role, row.role) }}</el-tag>
@@ -31,6 +32,9 @@
         </el-form-item>
         <el-form-item label="姓名">
           <el-input v-model="form.displayName" />
+        </el-form-item>
+        <el-form-item label="团队">
+          <el-input v-model="form.team" />
         </el-form-item>
         <el-form-item label="角色" prop="role">
           <el-select v-model="form.role">
@@ -64,6 +68,7 @@ const form = reactive({
   username: "",
   password: "",
   displayName: "",
+  team: "",
   role: "SALES_REP",
   enabled: true,
 });
@@ -80,6 +85,7 @@ const openCreate = () => {
     username: "",
     password: "",
     displayName: "",
+    team: "",
     role: "SALES_REP",
     enabled: true,
   });

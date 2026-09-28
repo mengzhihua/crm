@@ -39,6 +39,11 @@ knowledge.publish = (id) => api.put(`/knowledge/${id}/publish`);
 
 export const dashboard = {
   summary: () => api.get("/dashboard/summary"),
+  widgets: () => api.get("/dashboard/widgets"),
+  layout: () => api.get("/dashboard/layout"),
+  saveLayout: (data) => api.put("/dashboard/layout", data),
+  resetLayout: () => api.delete("/dashboard/layout"),
+  widget: (key) => api.get(`/dashboard/widget/${key}`),
 };
 
 export const auth = {
@@ -139,6 +144,26 @@ export const notifications = {
   unreadCount: () => api.get("/notifications/unread-count"),
   markRead: (id) => api.put(`/notifications/${id}/read`),
   markAllRead: () => api.put("/notifications/read-all"),
+};
+
+export const dataScopes = {
+  list: () => api.get("/data-scopes"),
+  save: (data) => api.put("/data-scopes", data),
+};
+
+export const shares = {
+  list: (params) => api.get("/shares", { params }),
+  add: (data) => api.post("/shares", data),
+  remove: (id) => api.delete("/shares", { params: { id } }),
+};
+
+export const channels = {
+  list: () => api.get("/channels"),
+  add: (data) => api.post("/channels", data),
+  update: (id, data) => api.put(`/channels/${id}`, data),
+  remove: (id) => api.delete(`/channels/${id}`),
+  test: (id) => api.post(`/channels/${id}/test`),
+  deliveries: (params) => api.get("/channels/deliveries", { params }),
 };
 
 export const auditLogs = {

@@ -12,6 +12,8 @@ import com.mengzhihua.crm.common.enums.MemberStatus;
 import com.mengzhihua.crm.common.enums.MemberType;
 import com.mengzhihua.crm.common.enums.RelatedType;
 import com.mengzhihua.crm.marketing.repository.CampaignMemberRepository;
+import com.mengzhihua.crm.permission.service.DataScopeService;
+import com.mengzhihua.crm.common.enums.DataObjectType;
 import com.mengzhihua.crm.record.service.FieldHistoryService;
 import com.mengzhihua.crm.sales.dto.LeadConvertRequest;
 import com.mengzhihua.crm.sales.entity.Account;
@@ -42,6 +44,7 @@ public class LeadService {
     private final OpportunityRepository opportunityRepository;
     private final CampaignMemberRepository campaignMemberRepository;
     private final FieldHistoryService fieldHistoryService;
+    private final DataScopeService dataScopeService;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -49,7 +52,8 @@ public class LeadService {
             ContactRepository contactRepository,
             OpportunityRepository opportunityRepository,
             CampaignMemberRepository campaignMemberRepository,
-            FieldHistoryService fieldHistoryService
+            FieldHistoryService fieldHistoryService,
+            DataScopeService dataScopeService
     ) {
         this.leadRepository = leadRepository;
         this.accountRepository = accountRepository;
@@ -57,6 +61,7 @@ public class LeadService {
         this.opportunityRepository = opportunityRepository;
         this.campaignMemberRepository = campaignMemberRepository;
         this.fieldHistoryService = fieldHistoryService;
+        this.dataScopeService = dataScopeService;
     }
 
     public PageResult<Lead> list(
@@ -81,7 +86,12 @@ public class LeadService {
             if (source != null) {
                 predicates.add(builder.equal(root.get("source"), source));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            Predicate filters = builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    filters,
+                    dataScopeService.<Lead>scope(DataObjectType.LEAD)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<Lead> result = leadRepository.findAll(
                 specification,
@@ -91,11 +101,22 @@ public class LeadService {
     }
 
     public Lead get(Long id) {
-        return leadRepository.findById(id)
+        Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new BizException("线索不存在"));
+        dataScopeService.checkRead(DataObjectType.LEAD, lead.getOwner(), id);
+        return lead;
     }
 
     public Lead save(Lead lead) {
+        if (lead.getId() != null) {
+            Lead current = get(lead.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.LEAD,
+                    current.getOwner(),
+                    lead.getId()
+            );
+            lead.setOwner(current.getOwner());
+        }
         if (lead.getStatus() == null) {
             lead.setStatus(LeadStatus.NEW);
         }
@@ -106,6 +127,8 @@ public class LeadService {
     }
 
     public void delete(Long id) {
+        Lead lead = get(id);
+        dataScopeService.checkEdit(DataObjectType.LEAD, lead.getOwner(), id);
         leadRepository.deleteById(id);
     }
 
