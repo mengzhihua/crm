@@ -65,6 +65,24 @@ export const maps = {
     CONTRACT: "合同",
     SYSTEM: "系统",
   },
+  dataScope: {
+    ALL: "全部",
+    TEAM: "团队",
+    OWN: "本人",
+  },
+  accessLevel: {
+    READ: "只读",
+    EDIT: "可编辑",
+  },
+  channelType: {
+    EMAIL: "邮件",
+    WEBHOOK: "Webhook",
+  },
+  deliveryStatus: {
+    SUCCESS: "成功",
+    FAILED: "失败",
+    SKIPPED: "跳过",
+  },
   role: {
     ADMIN: "管理员",
     SALES_MANAGER: "销售经理",

@@ -20,6 +20,8 @@ export const menuPermissions = {
   "/notifications": ["ADMIN", "SALES_MANAGER", "SALES_REP", "SERVICE_AGENT"],
   "/audit-logs": ["ADMIN"],
   "/reports": ["ADMIN", "SALES_MANAGER"],
+  "/data-permissions": ["ADMIN"],
+  "/channels": ["ADMIN"],
 };
 
 export const canSee = (path, role) =>

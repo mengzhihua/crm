@@ -87,6 +87,11 @@ const routes = [
     component: () => import("./views/audit/AuditLogList.vue"),
   },
   { path: "/reports", component: () => import("./views/reports/ReportCenter.vue") },
+  {
+    path: "/data-permissions",
+    component: () => import("./views/permissions/DataPermissionList.vue"),
+  },
+  { path: "/channels", component: () => import("./views/channels/ChannelList.vue") },
 ];
 
 const router = createRouter({
