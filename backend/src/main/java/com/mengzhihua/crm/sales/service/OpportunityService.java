@@ -85,14 +85,19 @@ public class OpportunityService {
         return opportunity;
     }
 
+    public Opportunity getForEdit(Long id) {
+        Opportunity opportunity = get(id);
+        dataScopeService.checkEdit(
+                DataObjectType.OPPORTUNITY,
+                opportunity.getOwner(),
+                id
+        );
+        return opportunity;
+    }
+
     public Opportunity save(Opportunity opportunity) {
         if (opportunity.getId() != null) {
-            Opportunity current = get(opportunity.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.OPPORTUNITY,
-                    current.getOwner(),
-                    opportunity.getId()
-            );
+            Opportunity current = getForEdit(opportunity.getId());
             opportunity.setOwner(current.getOwner());
         }
         if (opportunity.getStage() == null) {
@@ -107,17 +112,12 @@ public class OpportunityService {
     }
 
     public void delete(Long id) {
-        Opportunity opportunity = get(id);
-        dataScopeService.checkEdit(
-                DataObjectType.OPPORTUNITY,
-                opportunity.getOwner(),
-                id
-        );
+        Opportunity opportunity = getForEdit(id);
         opportunityRepository.deleteById(id);
     }
 
     public Opportunity changeStage(Long id, OpportunityStageRequest request) {
-        Opportunity opportunity = get(id);
+        Opportunity opportunity = getForEdit(id);
         OpportunityStage oldStage = opportunity.getStage();
         BigDecimal oldAmount = opportunity.getAmount();
         if (request.getStage() == OpportunityStage.CLOSED_LOST
@@ -159,7 +159,16 @@ public class OpportunityService {
     public List<Map<String, Object>> pipeline() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (OpportunityStage stage : OpportunityStage.values()) {
-            List<Opportunity> opportunities = opportunityRepository.findByStage(stage);
+            Specification<Opportunity> specification = (root, query, builder) ->
+                    builder.and(
+                            builder.equal(root.get("stage"), stage),
+                            dataScopeService.<Opportunity>scope(
+                                    DataObjectType.OPPORTUNITY
+                            ).toPredicate(root, query, builder)
+                    );
+            List<Opportunity> opportunities = opportunityRepository.findAll(
+                    specification
+            );
             BigDecimal amount = opportunities.stream()
                     .map(Opportunity::getAmount)
                     .filter(Objects::nonNull)

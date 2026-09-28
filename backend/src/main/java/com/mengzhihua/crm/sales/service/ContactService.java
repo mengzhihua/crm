@@ -65,22 +65,22 @@ public class ContactService {
         return contact;
     }
 
+    public Contact getForEdit(Long id) {
+        Contact contact = get(id);
+        dataScopeService.checkEdit(DataObjectType.CONTACT, contact.getOwner(), id);
+        return contact;
+    }
+
     public Contact save(Contact contact) {
         if (contact.getId() != null) {
-            Contact current = get(contact.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.CONTACT,
-                    current.getOwner(),
-                    contact.getId()
-            );
+            Contact current = getForEdit(contact.getId());
             contact.setOwner(current.getOwner());
         }
         return contactRepository.save(contact);
     }
 
     public void delete(Long id) {
-        Contact contact = get(id);
-        dataScopeService.checkEdit(DataObjectType.CONTACT, contact.getOwner(), id);
+        Contact contact = getForEdit(id);
         contactRepository.deleteById(id);
     }
 }

@@ -22,4 +22,9 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
             com.mengzhihua.crm.common.enums.ApprovalTargetType targetType,
             Long targetId
     );
+
+    List<ApprovalRequest> findByStatusAndApproverRoleOrderBySubmittedAtDesc(
+            ApprovalStatus status,
+            com.mengzhihua.crm.common.enums.Role approverRole
+    );
 }

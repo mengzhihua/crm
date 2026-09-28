@@ -10,3 +10,5 @@ spring:
 crm:
   scheduling:
     enabled: false
+  webhook:
+    allow-private: true

@@ -8,6 +8,7 @@ import com.mengzhihua.crm.channel.entity.ChannelConfig;
 import com.mengzhihua.crm.channel.entity.ChannelDelivery;
 import com.mengzhihua.crm.channel.repository.ChannelConfigRepository;
 import com.mengzhihua.crm.channel.repository.ChannelDeliveryRepository;
+import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.enums.ChannelType;
 import com.mengzhihua.crm.common.enums.DeliveryStatus;
 import com.mengzhihua.crm.notification.entity.Notification;
@@ -26,8 +27,10 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Collections;
 
 @Service
 public class ChannelDispatcher {
@@ -37,6 +40,7 @@ public class ChannelDispatcher {
     private final ObjectProvider<JavaMailSender> mailSender;
     private final ObjectMapper objectMapper;
     private final boolean mailEnabled;
+    private final boolean allowPrivateWebhook;
 
     public ChannelDispatcher(
             ChannelConfigRepository configRepository,
@@ -44,7 +48,8 @@ public class ChannelDispatcher {
             UserRepository userRepository,
             ObjectProvider<JavaMailSender> mailSender,
             ObjectMapper objectMapper,
-            @Value("${crm.mail.enabled:false}") boolean mailEnabled
+            @Value("${crm.mail.enabled:false}") boolean mailEnabled,
+            @Value("${crm.webhook.allow-private:false}") boolean allowPrivateWebhook
     ) {
         this.configRepository = configRepository;
         this.deliveryRepository = deliveryRepository;
@@ -52,6 +57,7 @@ public class ChannelDispatcher {
         this.mailSender = mailSender;
         this.objectMapper = objectMapper;
         this.mailEnabled = mailEnabled;
+        this.allowPrivateWebhook = allowPrivateWebhook;
     }
 
     @Async
@@ -69,12 +75,12 @@ public class ChannelDispatcher {
             if (!config.isEnabled() || !matches(config, notification)) {
                 continue;
             }
-            last = deliver(config, notification);
+            last = deliverTo(config, notification);
         }
         return last;
     }
 
-    private ChannelDelivery deliver(
+    public ChannelDelivery deliverTo(
             ChannelConfig config,
             Notification notification
     ) {
@@ -130,6 +136,7 @@ public class ChannelDispatcher {
             ChannelConfig config,
             Notification notification
     ) {
+        validateWebhookTarget(config.getTarget());
         String body;
         try {
             body = objectMapper.writeValueAsString(notification);
@@ -152,6 +159,44 @@ public class ChannelDispatcher {
                 new HttpEntity<>(body, headers),
                 String.class
         );
+    }
+
+    public void validateWebhookTarget(String target) {
+        if (allowPrivateWebhook) {
+            return;
+        }
+        if (target == null || target.trim().isEmpty()) {
+            throw new BizException("Webhook 地址不允许指向内网");
+        }
+        try {
+            URI uri = URI.create(target);
+            String scheme = uri.getScheme();
+            if (!"http".equalsIgnoreCase(scheme)
+                    && !"https".equalsIgnoreCase(scheme)) {
+                throw new BizException("Webhook 地址不允许指向内网");
+            }
+            if (uri.getHost() == null || isPrivate(uri.getHost())) {
+                throw new BizException("Webhook 地址不允许指向内网");
+            }
+        } catch (IllegalArgumentException exception) {
+            throw new BizException("Webhook 地址不允许指向内网");
+        }
+    }
+
+    private boolean isPrivate(String host) {
+        try {
+            for (InetAddress address : InetAddress.getAllByName(host)) {
+                if (address.isAnyLocalAddress()
+                        || address.isLoopbackAddress()
+                        || address.isLinkLocalAddress()
+                        || address.isSiteLocalAddress()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (UnknownHostException exception) {
+            return true;
+        }
     }
 
     private String sign(String secret, String body) {

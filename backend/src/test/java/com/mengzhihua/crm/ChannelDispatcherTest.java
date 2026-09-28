@@ -93,6 +93,27 @@ class ChannelDispatcherTest {
         }
     }
 
+    @Test
+    void deliverToIgnoresChannelEnabledAndEventTypes() {
+        ChannelConfig config = new ChannelConfig();
+        config.setName("定向测试");
+        config.setType(ChannelType.EMAIL);
+        config.setEnabled(false);
+        config.setEventTypes("APPROVAL");
+        config = configRepository.save(config);
+        Notification notification = new Notification();
+        notification.setRecipient("admin");
+        notification.setType(NotificationType.SYSTEM);
+        notification.setTitle("定向测试");
+        notification.setContent("内容");
+        notification = notificationRepository.save(notification);
+
+        ChannelDelivery delivery = dispatcher.deliverTo(config, notification);
+
+        assertEquals(DeliveryStatus.SKIPPED, delivery.getStatus());
+        assertEquals(1, configRepository.count());
+    }
+
     private void capture(
             HttpExchange exchange,
             AtomicReference<String> body,
