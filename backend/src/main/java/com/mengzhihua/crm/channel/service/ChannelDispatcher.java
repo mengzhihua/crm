@@ -44,6 +44,7 @@ public class ChannelDispatcher {
     private final ObjectMapper objectMapper;
     private final boolean mailEnabled;
     private final boolean allowPrivateWebhook;
+    private final OkHttpClient baseClient;
 
     public ChannelDispatcher(
             ChannelConfigRepository configRepository,
@@ -61,6 +62,12 @@ public class ChannelDispatcher {
         this.objectMapper = objectMapper;
         this.mailEnabled = mailEnabled;
         this.allowPrivateWebhook = allowPrivateWebhook;
+        this.baseClient = new OkHttpClient.Builder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build();
     }
 
     @Async
@@ -139,7 +146,6 @@ public class ChannelDispatcher {
             ChannelConfig config,
             Notification notification
     ) {
-        resolveWebhookTarget(config.getTarget());
         String body;
         try {
             body = objectMapper.writeValueAsString(notification);
@@ -150,18 +156,12 @@ public class ChannelDispatcher {
         List<InetAddress> addresses = resolveWebhookTarget(config.getTarget());
         String hostname = uri.getHost();
         Dns dns = value -> {
-            if (!hostname.equals(value)) {
-                throw new UnknownHostException(value);
+            if (hostname.equalsIgnoreCase(value)) {
+                return addresses;
             }
-            return addresses;
+            return Dns.SYSTEM.lookup(value);
         };
-        OkHttpClient client = new OkHttpClient.Builder()
-                .dns(dns)
-                .followRedirects(false)
-                .followSslRedirects(false)
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(5, TimeUnit.SECONDS)
-                .build();
+        OkHttpClient client = baseClient.newBuilder().dns(dns).build();
         RequestBody requestBody = RequestBody.create(
                 MediaType.get("application/json"),
                 body

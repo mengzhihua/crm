@@ -95,6 +95,39 @@ class ChannelDispatcherTest {
     }
 
     @Test
+    void webhookAcceptsUppercaseHost() throws Exception {
+        AtomicReference<String> body = new AtomicReference<>();
+        AtomicReference<String> signature = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/hook", exchange -> capture(exchange, body, signature));
+        server.start();
+        try {
+            ChannelConfig config = new ChannelConfig();
+            config.setName("大写主机 Webhook");
+            config.setType(ChannelType.WEBHOOK);
+            config.setEnabled(true);
+            config.setTarget(
+                    "http://LOCALHOST:" + server.getAddress().getPort() + "/hook"
+            );
+            config.setEventTypes("SYSTEM");
+            configRepository.save(config);
+            Notification notification = new Notification();
+            notification.setRecipient("admin");
+            notification.setType(NotificationType.SYSTEM);
+            notification.setTitle("大写主机测试");
+            notification.setContent("内容");
+            notification = notificationRepository.save(notification);
+
+            ChannelDelivery delivery = dispatcher.dispatchSync(notification);
+
+            assertEquals(DeliveryStatus.SUCCESS, delivery.getStatus());
+            assertTrue(body.get().contains("大写主机测试"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void deliverToIgnoresChannelEnabledAndEventTypes() {
         ChannelConfig config = new ChannelConfig();
         config.setName("定向测试");
