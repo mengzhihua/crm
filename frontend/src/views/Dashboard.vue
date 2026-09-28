@@ -148,6 +148,18 @@ const chartOption = (key, data) => {
 
 const renderCharts = async () => {
   await nextTick();
+  const activeKeys = new Set(
+    layoutWidgets.value
+      .filter((widget) => widgetType(widget.key) === "chart")
+      .map((widget) => widget.key),
+  );
+  chartInstances.forEach((instance, key) => {
+    const element = widgetRefs.get(key);
+    if (!activeKeys.has(key) || (element && instance.getDom() !== element)) {
+      instance.dispose();
+      chartInstances.delete(key);
+    }
+  });
   layoutWidgets.value
     .filter((widget) => widgetType(widget.key) === "chart")
     .forEach((widget) => {
@@ -156,6 +168,11 @@ const renderCharts = async () => {
         return;
       }
       let instance = chartInstances.get(widget.key);
+      if (instance && instance.getDom() !== element) {
+        instance.dispose();
+        chartInstances.delete(widget.key);
+        instance = null;
+      }
       if (!instance) {
         instance = echarts.init(element);
         chartInstances.set(widget.key, instance);

@@ -18,11 +18,16 @@ import com.mengzhihua.crm.sales.entity.Opportunity;
 import com.mengzhihua.crm.sales.entity.Quote;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
 import com.mengzhihua.crm.sales.repository.QuoteRepository;
+import com.mengzhihua.crm.common.enums.AccessLevel;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.permission.entity.RecordShare;
+import com.mengzhihua.crm.permission.repository.RecordShareRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -52,13 +57,45 @@ class ContractServiceTest {
     @Autowired
     private OpportunityRepository opportunityRepository;
 
+    @Autowired
+    private RecordShareRepository shareRepository;
+
     @BeforeEach
     void setUp() {
+        shareRepository.deleteAll();
         paymentRecordRepository.deleteAll();
         paymentPlanRepository.deleteAll();
         contractRepository.deleteAll();
         quoteRepository.deleteAll();
         opportunityRepository.deleteAll();
+    }
+
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES_REP")
+    void readShareCanRefreshPaymentPlans() {
+        Contract contract = new Contract();
+        contract.setName("共享合同");
+        contract.setContractNo("CT-SHARED-" + System.nanoTime());
+        contract.setOwner("manager");
+        contract.setAmount(new BigDecimal("100"));
+        contract.setStatus(ContractStatus.ACTIVE);
+        contract = contractRepository.save(contract);
+        PaymentPlan plan = new PaymentPlan();
+        plan.setContractId(contract.getId());
+        plan.setSeq(1);
+        plan.setPlanAmount(new BigDecimal("100"));
+        plan.setPlanDate(LocalDate.now());
+        paymentPlanRepository.save(plan);
+
+        RecordShare share = new RecordShare();
+        share.setObjectType(DataObjectType.CONTRACT);
+        share.setRecordId(contract.getId());
+        share.setSharedWith("sales");
+        share.setAccessLevel(AccessLevel.READ);
+        share.setSharedBy("manager");
+        shareRepository.save(share);
+
+        assertEquals(1, contractService.plans(contract.getId()).size());
     }
 
     @Test

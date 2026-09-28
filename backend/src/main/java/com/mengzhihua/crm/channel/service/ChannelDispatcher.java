@@ -22,12 +22,14 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.net.InetAddress;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Arrays;
@@ -136,7 +138,7 @@ public class ChannelDispatcher {
             ChannelConfig config,
             Notification notification
     ) {
-        validateWebhookTarget(config.getTarget());
+        WebhookTarget target = resolveWebhookTarget(config.getTarget());
         String body;
         try {
             body = objectMapper.writeValueAsString(notification);
@@ -145,26 +147,46 @@ public class ChannelDispatcher {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        if ("http".equalsIgnoreCase(target.uri.getScheme())) {
+            headers.set("Host", target.hostHeader);
+        }
         if (config.getSecret() != null && !config.getSecret().isEmpty()) {
             headers.set(
                     "X-CRM-Signature",
                     sign(config.getSecret(), body)
             );
         }
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(
+                    HttpURLConnection connection,
+                    String httpMethod
+            ) throws java.io.IOException {
+                super.prepareConnection(connection, httpMethod);
+                connection.setInstanceFollowRedirects(false);
+            }
+        };
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(5000);
-        new RestTemplate(factory).postForEntity(
-                config.getTarget(),
+        String targetUrl = target.uri.toString();
+        if ("http".equalsIgnoreCase(target.uri.getScheme())) {
+            targetUrl = target.pinnedUri.toString();
+        }
+        ResponseEntity<String> response = new RestTemplate(factory).postForEntity(
+                targetUrl,
                 new HttpEntity<>(body, headers),
                 String.class
         );
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new BizException("Webhook 返回非成功状态");
+        }
     }
 
     public void validateWebhookTarget(String target) {
-        if (allowPrivateWebhook) {
-            return;
-        }
+        resolveWebhookTarget(target);
+    }
+
+    private WebhookTarget resolveWebhookTarget(String target) {
         if (target == null || target.trim().isEmpty()) {
             throw new BizException("Webhook 地址不允许指向内网");
         }
@@ -175,28 +197,44 @@ public class ChannelDispatcher {
                     && !"https".equalsIgnoreCase(scheme)) {
                 throw new BizException("Webhook 地址不允许指向内网");
             }
-            if (uri.getHost() == null || isPrivate(uri.getHost())) {
+            if (uri.getHost() == null) {
                 throw new BizException("Webhook 地址不允许指向内网");
             }
+            InetAddress[] addresses = InetAddress.getAllByName(uri.getHost());
+            for (InetAddress address : addresses) {
+                if (!allowPrivateWebhook && isPrivate(address)) {
+                    throw new BizException("Webhook 地址不允许指向内网");
+                }
+            }
+            InetAddress address = addresses[0];
+            String hostHeader = uri.getHost();
+            if (uri.getPort() > 0) {
+                hostHeader += ":" + uri.getPort();
+            }
+            URI pinnedUri = new URI(
+                    uri.getScheme(),
+                    uri.getUserInfo(),
+                    address.getHostAddress(),
+                    uri.getPort(),
+                    uri.getPath(),
+                    uri.getQuery(),
+                    uri.getFragment()
+            );
+            return new WebhookTarget(uri, pinnedUri, hostHeader);
         } catch (IllegalArgumentException exception) {
+            throw new BizException("Webhook 地址不允许指向内网");
+        } catch (UnknownHostException exception) {
+            throw new BizException("Webhook 地址不允许指向内网");
+        } catch (java.net.URISyntaxException exception) {
             throw new BizException("Webhook 地址不允许指向内网");
         }
     }
 
-    private boolean isPrivate(String host) {
-        try {
-            for (InetAddress address : InetAddress.getAllByName(host)) {
-                if (address.isAnyLocalAddress()
-                        || address.isLoopbackAddress()
-                        || address.isLinkLocalAddress()
-                        || address.isSiteLocalAddress()) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (UnknownHostException exception) {
-            return true;
-        }
+    private boolean isPrivate(InetAddress address) {
+        return address.isAnyLocalAddress()
+                || address.isLoopbackAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress();
     }
 
     private String sign(String secret, String body) {
@@ -228,6 +266,18 @@ public class ChannelDispatcher {
     private static class SkippedDeliveryException extends RuntimeException {
         SkippedDeliveryException(String message) {
             super(message);
+        }
+    }
+
+    private static class WebhookTarget {
+        private final URI uri;
+        private final URI pinnedUri;
+        private final String hostHeader;
+
+        WebhookTarget(URI uri, URI pinnedUri, String hostHeader) {
+            this.uri = uri;
+            this.pinnedUri = pinnedUri;
+            this.hostHeader = hostHeader;
         }
     }
 }

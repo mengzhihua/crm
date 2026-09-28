@@ -226,7 +226,7 @@ public class ContractService {
     }
 
     public List<PaymentPlan> plans(Long contractId) {
-        getForEdit(contractId);
+        get(contractId);
         List<PaymentPlan> plans = paymentPlanRepository
                 .findByContractIdOrderBySeqAsc(contractId);
         for (PaymentPlan plan : plans) {
