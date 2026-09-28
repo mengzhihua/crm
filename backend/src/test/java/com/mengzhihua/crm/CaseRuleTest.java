@@ -7,8 +7,11 @@ import com.mengzhihua.crm.common.enums.CaseType;
 import com.mengzhihua.crm.common.enums.NotificationType;
 import com.mengzhihua.crm.common.enums.AccessLevel;
 import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.common.enums.DataScope;
+import com.mengzhihua.crm.common.enums.Role;
 import com.mengzhihua.crm.notification.entity.Notification;
 import com.mengzhihua.crm.notification.repository.NotificationRepository;
+import com.mengzhihua.crm.permission.entity.RoleDataScope;
 import com.mengzhihua.crm.service.dto.CaseAssignRequest;
 import com.mengzhihua.crm.service.dto.CaseStatusRequest;
 import com.mengzhihua.crm.service.dto.CaseSurveyRequest;
@@ -24,6 +27,7 @@ import com.mengzhihua.crm.service.repository.CrmCaseRepository;
 import com.mengzhihua.crm.service.repository.SlaPolicyRepository;
 import com.mengzhihua.crm.permission.entity.RecordShare;
 import com.mengzhihua.crm.permission.repository.RecordShareRepository;
+import com.mengzhihua.crm.permission.repository.RoleDataScopeRepository;
 import com.mengzhihua.crm.service.service.CaseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,6 +71,9 @@ class CaseRuleTest {
     @Autowired
     private RecordShareRepository shareRepository;
 
+    @Autowired
+    private RoleDataScopeRepository scopeRepository;
+
     @BeforeEach
     void setUp() {
         shareRepository.deleteAll();
@@ -80,7 +87,7 @@ class CaseRuleTest {
 
     @Test
     @WithMockUser(username = "sales", roles = "SALES_REP")
-    void readShareCanSubmitResolvedCaseSurvey() {
+    void readShareCannotSubmitResolvedCaseSurvey() {
         CrmCase crmCase = new CrmCase();
         crmCase.setCaseNo("CS-SHARED-" + System.nanoTime());
         crmCase.setSubject("共享已解决工单");
@@ -94,12 +101,26 @@ class CaseRuleTest {
         share.setAccessLevel(AccessLevel.READ);
         share.setSharedBy("manager");
         shareRepository.save(share);
+        RoleDataScope scope = scopeRepository
+                .findByRoleAndObjectType(Role.SALES_REP, DataObjectType.CASE)
+                .orElseGet(RoleDataScope::new);
+        scope.setRole(Role.SALES_REP);
+        scope.setObjectType(DataObjectType.CASE);
+        scope.setScope(DataScope.OWN);
+        scopeRepository.save(scope);
 
         CaseSurveyRequest request = new CaseSurveyRequest();
         request.setScore(4);
         request.setComment("满意");
+        Long sharedCaseId = crmCase.getId();
 
-        assertEquals(4, caseService.survey(crmCase.getId(), request).getScore());
+        assertThrows(
+                BizException.class,
+                () -> caseService.survey(sharedCaseId, request)
+        );
+        share.setAccessLevel(AccessLevel.EDIT);
+        shareRepository.save(share);
+        assertEquals(4, caseService.survey(sharedCaseId, request).getScore());
     }
 
     @Test

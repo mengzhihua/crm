@@ -12,27 +12,28 @@ import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.enums.ChannelType;
 import com.mengzhihua.crm.common.enums.DeliveryStatus;
 import com.mengzhihua.crm.notification.entity.Notification;
+import okhttp3.Dns;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.net.InetAddress;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class ChannelDispatcher {
@@ -145,33 +146,42 @@ public class ChannelDispatcher {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException(exception.getMessage(), exception);
         }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        URI uri = URI.create(config.getTarget());
+        List<InetAddress> addresses = resolveWebhookTarget(config.getTarget());
+        String hostname = uri.getHost();
+        Dns dns = value -> {
+            if (!hostname.equals(value)) {
+                throw new UnknownHostException(value);
+            }
+            return addresses;
+        };
+        OkHttpClient client = new OkHttpClient.Builder()
+                .dns(dns)
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build();
+        RequestBody requestBody = RequestBody.create(
+                MediaType.get("application/json"),
+                body
+        );
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(config.getTarget())
+                .post(requestBody)
+                .addHeader("Content-Type", "application/json");
         if (config.getSecret() != null && !config.getSecret().isEmpty()) {
-            headers.set(
+            requestBuilder.addHeader(
                     "X-CRM-Signature",
                     sign(config.getSecret(), body)
             );
         }
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
-            @Override
-            protected void prepareConnection(
-                    HttpURLConnection connection,
-                    String httpMethod
-            ) throws java.io.IOException {
-                super.prepareConnection(connection, httpMethod);
-                connection.setInstanceFollowRedirects(false);
+        try (Response response = client.newCall(requestBuilder.build()).execute()) {
+            if (!response.isSuccessful()) {
+                throw new BizException("Webhook 返回非成功状态");
             }
-        };
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(5000);
-        ResponseEntity<String> response = new RestTemplate(factory).postForEntity(
-                config.getTarget(),
-                new HttpEntity<>(body, headers),
-                String.class
-        );
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new BizException("Webhook 返回非成功状态");
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(exception.getMessage(), exception);
         }
     }
 
@@ -179,7 +189,7 @@ public class ChannelDispatcher {
         resolveWebhookTarget(target);
     }
 
-    private void resolveWebhookTarget(String target) {
+    private List<InetAddress> resolveWebhookTarget(String target) {
         if (target == null || target.trim().isEmpty()) {
             throw new BizException("Webhook 地址不允许指向内网");
         }
@@ -199,6 +209,7 @@ public class ChannelDispatcher {
                     throw new BizException("Webhook 地址不允许指向内网");
                 }
             }
+            return Arrays.asList(addresses);
         } catch (IllegalArgumentException exception) {
             throw new BizException("Webhook 地址不允许指向内网");
         } catch (UnknownHostException exception) {
