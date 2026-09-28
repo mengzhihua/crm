@@ -180,28 +180,6 @@ public class ChannelDispatcher {
                 .anyMatch(value -> value.equals(notification.getType().name()));
     }
 
-    private static class WebhookBody {
-        private final Long id;
-        private final Object type;
-        private final String title;
-        private final String content;
-        private final String recipient;
-        private final Object relatedType;
-        private final Long relatedId;
-        private final Object createdAt;
-
-        WebhookBody(Notification notification) {
-            id = notification.getId();
-            type = notification.getType();
-            title = notification.getTitle();
-            content = notification.getContent();
-            recipient = notification.getRecipient();
-            relatedType = notification.getRelatedType();
-            relatedId = notification.getRelatedId();
-            createdAt = notification.getCreatedAt();
-        }
-    }
-
     private static class SkippedDeliveryException extends RuntimeException {
         SkippedDeliveryException(String message) {
             super(message);
