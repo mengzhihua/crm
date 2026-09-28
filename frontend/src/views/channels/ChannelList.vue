@@ -35,7 +35,12 @@
           </el-select>
         </el-form-item>
         <el-form-item label="目标"><el-input v-model="form.target" /></el-form-item>
-        <el-form-item label="密钥"><el-input v-model="form.secret" /></el-form-item>
+        <el-form-item label="密钥">
+          <el-input
+            v-model="form.secret"
+            placeholder="留空则保持不变"
+          />
+        </el-form-item>
         <el-form-item label="事件">
           <el-select v-model="events" multiple>
             <el-option

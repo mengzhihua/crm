@@ -78,7 +78,7 @@ auth_json -X PUT "$base/api/dashboard/layout" -d "$layout" >/dev/null
 auth_json "$base/api/dashboard/layout" | jq -e '.data.widgetsJson != null' >/dev/null
 auth_json "$base/api/data-scopes" | jq -e '.data != null' >/dev/null
 channel=$(auth_json -X POST "$base/api/channels" -d \
-  '{"name":"冒烟 Webhook","type":"WEBHOOK","enabled":false,"target":"http://127.0.0.1:9","eventTypes":"SYSTEM"}')
+  '{"name":"冒烟邮件","type":"EMAIL","enabled":false,"target":"","eventTypes":"SYSTEM"}')
 channel_id=$(jq -r '.data.id' <<<"$channel")
 test "$channel_id" != null
 auth_json -X POST "$base/api/channels/$channel_id/test" >/dev/null
