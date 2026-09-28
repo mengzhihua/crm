@@ -27,4 +27,6 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
             ApprovalStatus status,
             com.mengzhihua.crm.common.enums.Role approverRole
     );
+
+    List<ApprovalRequest> findByStatusOrderBySubmittedAtDesc(ApprovalStatus status);
 }

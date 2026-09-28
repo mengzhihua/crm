@@ -361,7 +361,7 @@ public class CaseService {
     }
 
     public CaseSurvey survey(Long id, CaseSurveyRequest request) {
-        CrmCase crmCase = getForEdit(id);
+        CrmCase crmCase = get(id);
         if (crmCase.getStatus() != CaseStatus.RESOLVED
                 && crmCase.getStatus() != CaseStatus.CLOSED) {
             throw new BizException("只有已解决或已关闭工单可以评价");

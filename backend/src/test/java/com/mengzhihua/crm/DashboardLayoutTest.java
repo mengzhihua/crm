@@ -2,6 +2,11 @@ package com.mengzhihua.crm;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mengzhihua.crm.approval.entity.ApprovalRequest;
+import com.mengzhihua.crm.approval.repository.ApprovalRequestRepository;
+import com.mengzhihua.crm.common.enums.ApprovalStatus;
+import com.mengzhihua.crm.common.enums.ApprovalTargetType;
+import com.mengzhihua.crm.common.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -11,7 +16,11 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -27,6 +36,9 @@ class DashboardLayoutTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ApprovalRequestRepository approvalRequestRepository;
+
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void savesGetsAndResetsLayoutAndWidgets() throws Exception {
@@ -39,7 +51,7 @@ class DashboardLayoutTest {
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
-                .getContentAsString();
+                .getContentAsString(StandardCharsets.UTF_8);
         assertFalse(objectMapper.readTree(saved)
                 .path("data")
                 .path("widgetsJson")
@@ -57,5 +69,29 @@ class DashboardLayoutTest {
         }
         mockMvc.perform(delete("/api/dashboard/layout"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void adminPendingApprovalsIncludeOtherRoles() throws Exception {
+        approvalRequestRepository.deleteAll();
+        ApprovalRequest request = new ApprovalRequest();
+        request.setTargetType(ApprovalTargetType.QUOTE);
+        request.setTargetId(1L);
+        request.setTitle("经理审批报价");
+        request.setSubmitter("sales");
+        request.setApproverRole(Role.SALES_MANAGER);
+        request.setStatus(ApprovalStatus.PENDING);
+        request.setSubmittedAt(LocalDateTime.now());
+        approvalRequestRepository.save(request);
+
+        String response = mockMvc.perform(get("/api/dashboard/widget/myPendingApprovals"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        JsonNode records = objectMapper.readTree(response).path("data");
+        assertEquals("经理审批报价", records.get(0).path("title").asText());
     }
 }

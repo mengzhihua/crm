@@ -5,6 +5,8 @@ import com.mengzhihua.crm.common.enums.CasePriority;
 import com.mengzhihua.crm.common.enums.CaseStatus;
 import com.mengzhihua.crm.common.enums.CaseType;
 import com.mengzhihua.crm.common.enums.NotificationType;
+import com.mengzhihua.crm.common.enums.AccessLevel;
+import com.mengzhihua.crm.common.enums.DataObjectType;
 import com.mengzhihua.crm.notification.entity.Notification;
 import com.mengzhihua.crm.notification.repository.NotificationRepository;
 import com.mengzhihua.crm.service.dto.CaseAssignRequest;
@@ -20,12 +22,15 @@ import com.mengzhihua.crm.service.repository.CaseCommentRepository;
 import com.mengzhihua.crm.service.repository.CaseSurveyRepository;
 import com.mengzhihua.crm.service.repository.CrmCaseRepository;
 import com.mengzhihua.crm.service.repository.SlaPolicyRepository;
+import com.mengzhihua.crm.permission.entity.RecordShare;
+import com.mengzhihua.crm.permission.repository.RecordShareRepository;
 import com.mengzhihua.crm.service.service.CaseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -59,14 +64,42 @@ class CaseRuleTest {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @Autowired
+    private RecordShareRepository shareRepository;
+
     @BeforeEach
     void setUp() {
+        shareRepository.deleteAll();
         notificationRepository.deleteAll();
         surveyRepository.deleteAll();
         commentRepository.deleteAll();
         caseRepository.deleteAll();
         assignmentRuleRepository.deleteAll();
         slaPolicyRepository.deleteAll();
+    }
+
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES_REP")
+    void readShareCanSubmitResolvedCaseSurvey() {
+        CrmCase crmCase = new CrmCase();
+        crmCase.setCaseNo("CS-SHARED-" + System.nanoTime());
+        crmCase.setSubject("共享已解决工单");
+        crmCase.setOwner("manager");
+        crmCase.setStatus(CaseStatus.RESOLVED);
+        crmCase = caseRepository.save(crmCase);
+        RecordShare share = new RecordShare();
+        share.setObjectType(DataObjectType.CASE);
+        share.setRecordId(crmCase.getId());
+        share.setSharedWith("sales");
+        share.setAccessLevel(AccessLevel.READ);
+        share.setSharedBy("manager");
+        shareRepository.save(share);
+
+        CaseSurveyRequest request = new CaseSurveyRequest();
+        request.setScore(4);
+        request.setComment("满意");
+
+        assertEquals(4, caseService.survey(crmCase.getId(), request).getScore());
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.mengzhihua.crm.common.enums.LeadStatus;
 import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.ApprovalStatus;
 import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.common.enums.Role;
 import com.mengzhihua.crm.approval.entity.ApprovalRequest;
 import com.mengzhihua.crm.approval.repository.ApprovalRequestRepository;
 import com.mengzhihua.crm.notification.repository.NotificationRepository;
@@ -44,6 +45,8 @@ import java.util.Objects;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Tag(name = "仪表盘")
 @RestController
@@ -187,12 +190,17 @@ public class DashboardController {
             return Result.ok(serviceSummary());
         }
         if ("myPendingApprovals".equals(key)) {
-            List<ApprovalRequest> requests =
-                    approvalRequestRepository
-                            .findByStatusAndApproverRoleOrderBySubmittedAtDesc(
-                                    ApprovalStatus.PENDING,
-                                    CurrentUser.role()
-                            );
+            List<ApprovalRequest> requests;
+            if (CurrentUser.role() == Role.ADMIN) {
+                requests = approvalRequestRepository
+                        .findByStatusOrderBySubmittedAtDesc(ApprovalStatus.PENDING);
+            } else {
+                requests = approvalRequestRepository
+                        .findByStatusAndApproverRoleOrderBySubmittedAtDesc(
+                                ApprovalStatus.PENDING,
+                                CurrentUser.role()
+                        );
+            }
             return Result.ok(requests.subList(
                     0,
                     Math.min(5, requests.size())
@@ -308,14 +316,20 @@ public class DashboardController {
     }
 
     private Map<String, Object> serviceSummary() {
-        List<CaseSurvey> surveys = surveyRepository.findAllByScoreIsNotNull();
+        List<CrmCase> cases = caseRepository.findAll(dataScopeService.<CrmCase>scope(
+                DataObjectType.CASE
+        ));
+        Set<Long> caseIds = cases.stream()
+                .map(CrmCase::getId)
+                .collect(Collectors.toSet());
+        List<CaseSurvey> surveys = surveyRepository.findAllByScoreIsNotNull()
+                .stream()
+                .filter(item -> caseIds.contains(item.getCaseId()))
+                .collect(Collectors.toList());
         double average = surveys.stream()
                 .mapToInt(CaseSurvey::getScore)
                 .average()
                 .orElse(0);
-        List<CrmCase> cases = caseRepository.findAll(dataScopeService.<CrmCase>scope(
-                DataObjectType.CASE
-        ));
         long total = cases.stream()
                 .filter(item -> item.getSlaDueAt() != null
                         && item.getResolvedAt() != null)

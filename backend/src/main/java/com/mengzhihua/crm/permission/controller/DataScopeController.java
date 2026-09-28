@@ -58,6 +58,11 @@ public class DataScopeController {
             @RequestParam DataObjectType objectType,
             @RequestParam Long recordId
     ) {
+        dataScopeService.checkRead(
+                objectType,
+                dataScopeService.ownerOf(objectType, recordId),
+                recordId
+        );
         return Result.ok(shareRepository.findByObjectTypeAndRecordId(objectType, recordId));
     }
 

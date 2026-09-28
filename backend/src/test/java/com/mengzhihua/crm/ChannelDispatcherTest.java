@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,6 +113,50 @@ class ChannelDispatcherTest {
 
         assertEquals(DeliveryStatus.SKIPPED, delivery.getStatus());
         assertEquals(1, configRepository.count());
+    }
+
+    @Test
+    void webhookDoesNotFollowRedirects() throws Exception {
+        AtomicInteger privateHits = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/redirect", exchange -> {
+            exchange.getResponseHeaders().set(
+                    "Location",
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/private"
+            );
+            exchange.sendResponseHeaders(302, -1);
+            exchange.close();
+        });
+        server.createContext("/private", exchange -> {
+            privateHits.incrementAndGet();
+            exchange.sendResponseHeaders(200, 0);
+            exchange.close();
+        });
+        server.start();
+        try {
+            ChannelConfig config = new ChannelConfig();
+            config.setName("重定向测试");
+            config.setType(ChannelType.WEBHOOK);
+            config.setEnabled(true);
+            config.setTarget(
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/redirect"
+            );
+            config.setEventTypes("SYSTEM");
+            configRepository.save(config);
+            Notification notification = new Notification();
+            notification.setRecipient("admin");
+            notification.setType(NotificationType.SYSTEM);
+            notification.setTitle("重定向测试");
+            notification.setContent("内容");
+            notification = notificationRepository.save(notification);
+
+            ChannelDelivery delivery = dispatcher.dispatchSync(notification);
+
+            assertEquals(DeliveryStatus.FAILED, delivery.getStatus());
+            assertEquals(0, privateHits.get());
+        } finally {
+            server.stop(0);
+        }
     }
 
     private void capture(
