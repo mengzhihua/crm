@@ -70,7 +70,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-import { dashboard, serviceDashboard } from "../api";
+import { dashboard } from "../api";
 import { maps, text } from "../utils/enums";
 
 const catalog = ref([]);
@@ -194,7 +194,7 @@ const loadLayout = async () => {
   dataMap.value = {};
   await Promise.all(layoutWidgets.value.map(async (widget) => {
     if (widget.key === "serviceSummary") {
-      serviceData.value = await serviceDashboard();
+      serviceData.value = await dashboard.widget("serviceSummary");
     } else {
       dataMap.value[widget.key] = await dashboard.widget(widget.key);
     }

@@ -2,6 +2,8 @@ package com.mengzhihua.crm.service.controller;
 
 import com.mengzhihua.crm.common.Result;
 import com.mengzhihua.crm.common.enums.CaseStatus;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import com.mengzhihua.crm.service.entity.CaseSurvey;
 import com.mengzhihua.crm.service.entity.CrmCase;
 import com.mengzhihua.crm.service.repository.CaseSurveyRepository;
@@ -20,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Tag(name = "服务指标")
 @RestController
@@ -28,26 +32,37 @@ import java.util.Map;
 public class ServiceDashboardController {
     private final CrmCaseRepository caseRepository;
     private final CaseSurveyRepository surveyRepository;
+    private final DataScopeService dataScopeService;
 
     public ServiceDashboardController(
             CrmCaseRepository caseRepository,
-            CaseSurveyRepository surveyRepository
+            CaseSurveyRepository surveyRepository,
+            DataScopeService dataScopeService
     ) {
         this.caseRepository = caseRepository;
         this.surveyRepository = surveyRepository;
+        this.dataScopeService = dataScopeService;
     }
 
     @Operation(summary = "查询服务指标")
     @GetMapping("/service")
     public Result<Map<String, Object>> service() {
-        List<CaseSurvey> surveys = surveyRepository.findAllByScoreIsNotNull();
+        List<CrmCase> cases = caseRepository.findAll(
+                dataScopeService.<CrmCase>scope(DataObjectType.CASE)
+        );
+        Set<Long> caseIds = cases.stream()
+                .map(CrmCase::getId)
+                .collect(Collectors.toSet());
+        List<CaseSurvey> surveys = surveyRepository.findAllByScoreIsNotNull()
+                .stream()
+                .filter(item -> caseIds.contains(item.getCaseId()))
+                .collect(Collectors.toList());
         BigDecimal averageScore = surveys.isEmpty()
                 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(surveys.stream()
                 .mapToInt(CaseSurvey::getScore)
                 .average()
                 .orElse(0));
-        List<CrmCase> cases = caseRepository.findAll();
         long responseCount = cases.stream()
                 .filter(item -> item.getFirstResponseAt() != null)
                 .count();
