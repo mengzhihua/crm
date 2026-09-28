@@ -41,7 +41,7 @@ import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 import { notifications } from "../../api";
 import { maps, text } from "../../utils/enums";
-import { refreshUnread } from "../../utils/notify";
+import { refreshNotifications } from "../../utils/notify";
 
 const router = useRouter();
 const rows = ref([]);
@@ -60,19 +60,19 @@ const load = async () => {
 };
 const read = async (row) => {
   await notifications.markRead(row.id);
-  await refreshUnread();
+  await refreshNotifications();
   ElMessage.success("已标记为已读");
   load();
 };
 const markAllRead = async () => {
   await notifications.markAllRead();
-  await refreshUnread();
+  await refreshNotifications();
   load();
 };
 const open = async (row) => {
   if (!row.read) {
     await notifications.markRead(row.id);
-    await refreshUnread();
+    await refreshNotifications();
   }
   const paths = {
     QUOTE: row.relatedId ? `/quotes/${row.relatedId}` : "/quotes",
