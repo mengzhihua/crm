@@ -13,7 +13,7 @@
 
 ## 功能概览
 
-按四期迭代交付：
+按五期迭代交付：
 
 **一期 · 销售与服务基础**
 - 线索管理与一键转化（客户 + 联系人 + 商机）
@@ -42,6 +42,11 @@
 - 操作审计：写操作、登录结果、管理员查询和 CSV 导出
 - 报表中心：销售漏斗、销售业绩、工单分析、活动 ROI、应收账款
 
+**五期 · 数据权限、可配置仪表盘与消息渠道**
+- 按角色配置全部、团队、本人范围，并支持记录共享
+- 可保存个人仪表盘布局、组件顺序和栅格宽度
+- 支持邮件与 Webhook 消息渠道及投递记录
+
 ## 对象映射
 
 | Salesforce 对象 | 本系统模块 |
@@ -65,6 +70,9 @@
 | ApprovalStep | 多级审批步骤 |
 | AuditLog | 操作审计 |
 | Report | 销售与服务报表 |
+| RoleDataScope / RecordShare | 细粒度数据权限与记录共享 |
+| DashboardLayout | 个人仪表盘布局 |
+| ChannelConfig / ChannelDelivery | 邮件、Webhook 消息渠道 |
 | SlaPolicy / AssignmentRule / CaseSurvey | SLA、工单分派与满意度 |
 | FieldHistory / Note / Attachment | 字段历史、备注与附件动态 |
 | Search / CSV Export | 全局搜索与列表导出 |
@@ -137,6 +145,21 @@ cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 | `crm.jwt.secret` | 内置示例值 | JWT 签名密钥，生产环境务必替换 |
 | `crm.jwt.expire-hours` | 12 | 登录令牌有效期 |
 | `crm.scheduling.enabled` | true | 定时任务开关（过期合同刷新、超期工单升级） |
+| `crm.mail.enabled` | false | 邮件消息渠道开关，默认关闭 |
+
+邮件渠道示例（启用后按环境配置 SMTP）：
+
+```yaml
+crm:
+  mail:
+    enabled: true
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: crm@example.com
+    password: change-me
+```
 
 schema 变更或需要重置演示数据时执行 `rm -rf backend/data` 后重新启动。`test` profile 不执行演示数据初始化，也不启用定时任务。
 
@@ -162,6 +185,9 @@ schema 变更或需要重置演示数据时执行 `rm -rf backend/data` 后重�
 | `/api/history`、`/api/notes`、`/api/attachments` | 字段历史、备注、附件 |
 | `/api/search` | 全局搜索 |
 | `/api/dashboard` | 销售与服务仪表盘 |
+| `/api/data-scopes`、`/api/shares` | 数据权限矩阵与记录共享 |
+| `/api/dashboard/widgets`、`/api/dashboard/layout`、`/api/dashboard/widget/{key}` | 仪表盘组件与布局 |
+| `/api/channels` | 邮件、Webhook 渠道及投递记录 |
 | `/api/{leads,accounts,contacts,opportunities,cases,contracts}/export` | CSV 导出 |
 
 完整接口与参数见 Swagger。
@@ -174,7 +200,7 @@ schema 变更或需要重置演示数据时执行 `rm -rf backend/data` 后重�
 | SALES_MANAGER | 销售、产品价格、报价审批、市场活动、合同、预测、销售目标、仪表盘；服务与知识只读 |
 | SALES_REP | 销售、报价、合同读写；产品价格、市场活动、预测只读；服务与知识只读 |
 | SERVICE_AGENT | 工单、知识、活动读写；客户联系人只读；仪表盘 |
-| 新增菜单 | 通知（全角色）、操作审计（ADMIN）、报表中心（ADMIN/SALES_MANAGER） |
+| 新增菜单 | 通知（全角色）、操作审计（ADMIN）、报表中心（ADMIN/SALES_MANAGER）、数据权限（ADMIN）、消息渠道（ADMIN） |
 
 ## 测试
 
@@ -191,5 +217,7 @@ bash scripts/smoke.sh
 ```
 
 ## 后续规划
+
+- 多租户与租户级配置隔离
 
 多租户、消息渠道集成、可配置仪表盘与更细粒度数据权限。

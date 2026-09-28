@@ -7,9 +7,11 @@ login(){
 }
 admin_token=$(login '{"username":"admin","password":"admin123"}' | jq -r '.data.token')
 manager_token=$(login '{"username":"manager","password":"123456"}' | jq -r '.data.token')
-test "$admin_token" != null -a "$manager_token" != null
+sales_token=$(login '{"username":"sales","password":"123456"}' | jq -r '.data.token')
+test "$admin_token" != null -a "$manager_token" != null -a "$sales_token" != null
 auth_json(){ curl -fsS -H 'Content-Type: application/json' -H "Authorization: Bearer $admin_token" "$@"; }
 manager_json(){ curl -fsS -H 'Content-Type: application/json' -H "Authorization: Bearer $manager_token" "$@"; }
+sales_json(){ curl -fsS -H 'Content-Type: application/json' -H "Authorization: Bearer $sales_token" "$@"; }
 product_code="SMOKE-$(date +%s)"
 product=$(auth_json -X POST "$base/api/products" -d '{"code":"'"$product_code"'","name":"冒烟产品","unit":"套","listPrice":10000,"active":true}')
 product_id=$(jq -r '.data.id' <<<"$product")
@@ -31,6 +33,11 @@ items=$(auth_json -X PUT "$base/api/opportunities/$opp/items" -d '{"items":[{"pr
 jq -e '.data[0].totalPrice == 100000' <<<"$items" >/dev/null
 opportunity=$(auth_json "$base/api/opportunities/$opp")
 jq -e '.data.amount == 100000' <<<"$opportunity" >/dev/null
+manager_opp=$(manager_json "$base/api/opportunities?page=1&size=100" \
+  | jq -r '.data.records[] | select(.owner == "manager") | .id' | head -n 1)
+sales_foreign=$(curl -sS -o /tmp/crm-foreign.json -w '%{http_code}' \
+  -H "Authorization: Bearer $sales_token" "$base/api/opportunities/$manager_opp")
+test "$sales_foreign" != 200
 quote=$(auth_json -X POST "$base/api/quotes/from-opportunity/$opp")
 quote_id=$(jq -r '.data.id' <<<"$quote")
 auth_json -X PUT "$base/api/quotes/$quote_id/discount" -d '{"discountRate":25}' >/dev/null
@@ -66,6 +73,17 @@ summary=$(auth_json "$base/api/dashboard/summary")
 jq -e '.data.newLeadCount != null and .data.pipeline != null and .data.openCaseCount != null' <<<"$summary" >/dev/null
 auth_json "$base/api/notifications/unread-count" | jq -e '.data != null' >/dev/null
 auth_json -X PUT "$base/api/notifications/read-all" >/dev/null
+layout='{"widgetsJson":"[{\"key\":\"newLeadCount\",\"span\":12}]"}'
+auth_json -X PUT "$base/api/dashboard/layout" -d "$layout" >/dev/null
+auth_json "$base/api/dashboard/layout" | jq -e '.data.widgetsJson != null' >/dev/null
+auth_json "$base/api/data-scopes" | jq -e '.data != null' >/dev/null
+channel=$(auth_json -X POST "$base/api/channels" -d \
+  '{"name":"冒烟 Webhook","type":"WEBHOOK","enabled":false,"target":"http://127.0.0.1:9","eventTypes":"SYSTEM"}')
+channel_id=$(jq -r '.data.id' <<<"$channel")
+test "$channel_id" != null
+auth_json -X POST "$base/api/channels/$channel_id/test" >/dev/null
+auth_json "$base/api/channels/deliveries?channelId=$channel_id&page=1&size=10" \
+  | jq -e '.data != null' >/dev/null
 auth_json "$base/api/audit-logs?page=1&size=10" | jq -e '.data != null' >/dev/null
 auth_json "$base/api/reports/sales-funnel" | jq -e '.data.conversion != null' >/dev/null
 echo "冒烟测试通过：市场活动、报价审批、通知、审计、报表、合同回款、预测搜索导出、工单与仪表盘"
