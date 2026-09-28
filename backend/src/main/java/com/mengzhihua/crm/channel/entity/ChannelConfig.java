@@ -3,6 +3,7 @@ package com.mengzhihua.crm.channel.entity;
 import com.mengzhihua.crm.common.BaseEntity;
 import com.mengzhihua.crm.common.enums.ChannelType;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -23,6 +24,8 @@ public class ChannelConfig extends BaseEntity {
 
     private boolean enabled;
     private String target;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String secret;
 
     @Column(length = 1000)

@@ -10,6 +10,7 @@ import com.mengzhihua.crm.permission.entity.RecordShare;
 import com.mengzhihua.crm.permission.entity.RoleDataScope;
 import com.mengzhihua.crm.permission.repository.RecordShareRepository;
 import com.mengzhihua.crm.permission.repository.RoleDataScopeRepository;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,13 +28,16 @@ import java.util.List;
 public class DataScopeController {
     private final RoleDataScopeRepository scopeRepository;
     private final RecordShareRepository shareRepository;
+    private final DataScopeService dataScopeService;
 
     public DataScopeController(
             RoleDataScopeRepository scopeRepository,
-            RecordShareRepository shareRepository
+            RecordShareRepository shareRepository,
+            DataScopeService dataScopeService
     ) {
         this.scopeRepository = scopeRepository;
         this.shareRepository = shareRepository;
+        this.dataScopeService = dataScopeService;
     }
 
     @GetMapping("/data-scopes")
@@ -58,15 +62,35 @@ public class DataScopeController {
     }
 
     @PostMapping("/shares")
-    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public Result<RecordShare> share(@RequestBody RecordShare share) {
+        dataScopeService.checkEdit(
+                share.getObjectType(),
+                dataScopeService.ownerOf(
+                        share.getObjectType(),
+                        share.getRecordId()
+                ),
+                share.getRecordId()
+        );
         share.setSharedBy(CurrentUser.usernameOrDefault());
         return Result.ok(shareRepository.save(share));
     }
 
     @DeleteMapping("/shares")
-    @PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public Result<Void> revoke(@RequestParam Long id) {
+        RecordShare share = shareRepository.findById(id)
+                .orElseThrow(() -> new com.mengzhihua.crm.common.BizException(
+                        "分享不存在"
+                ));
+        dataScopeService.checkEdit(
+                share.getObjectType(),
+                dataScopeService.ownerOf(
+                        share.getObjectType(),
+                        share.getRecordId()
+                ),
+                share.getRecordId()
+        );
         shareRepository.deleteById(id);
         return Result.ok();
     }

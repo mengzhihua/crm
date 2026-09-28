@@ -15,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
@@ -55,7 +57,18 @@ public class NotificationService {
         notification.setRelatedId(relatedId);
         notification.setRead(false);
         Notification saved = notificationRepository.save(notification);
-        channelDispatcher.dispatch(saved);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            channelDispatcher.dispatch(saved);
+                        }
+                    }
+            );
+        } else {
+            channelDispatcher.dispatch(saved);
+        }
         return saved;
     }
 

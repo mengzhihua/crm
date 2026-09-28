@@ -23,6 +23,9 @@ springdoc:
 crm:
   mail:
     enabled: false
+  webhook:
+    allow-private: false
+    # Set true only for trusted local/test webhook endpoints.
   upload-dir: ./data/uploads
   jwt:
     secret: "crm-phase2-secret-key-change-in-production-2026"

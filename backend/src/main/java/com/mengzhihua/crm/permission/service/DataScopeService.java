@@ -3,6 +3,14 @@ package com.mengzhihua.crm.permission.service;
 import com.mengzhihua.crm.auth.CurrentUser;
 import com.mengzhihua.crm.auth.entity.User;
 import com.mengzhihua.crm.auth.repository.UserRepository;
+import com.mengzhihua.crm.sales.entity.Account;
+import com.mengzhihua.crm.sales.entity.Contact;
+import com.mengzhihua.crm.sales.entity.Lead;
+import com.mengzhihua.crm.sales.entity.Opportunity;
+import com.mengzhihua.crm.sales.repository.AccountRepository;
+import com.mengzhihua.crm.sales.repository.ContactRepository;
+import com.mengzhihua.crm.sales.repository.LeadRepository;
+import com.mengzhihua.crm.sales.repository.OpportunityRepository;
 import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.enums.AccessLevel;
 import com.mengzhihua.crm.common.enums.DataObjectType;
@@ -12,6 +20,10 @@ import com.mengzhihua.crm.permission.entity.RecordShare;
 import com.mengzhihua.crm.permission.entity.RoleDataScope;
 import com.mengzhihua.crm.permission.repository.RecordShareRepository;
 import com.mengzhihua.crm.permission.repository.RoleDataScopeRepository;
+import com.mengzhihua.crm.contract.entity.Contract;
+import com.mengzhihua.crm.contract.repository.ContractRepository;
+import com.mengzhihua.crm.service.entity.CrmCase;
+import com.mengzhihua.crm.service.repository.CrmCaseRepository;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -25,15 +37,33 @@ public class DataScopeService {
     private final RoleDataScopeRepository scopeRepository;
     private final RecordShareRepository shareRepository;
     private final UserRepository userRepository;
+    private final LeadRepository leadRepository;
+    private final AccountRepository accountRepository;
+    private final ContactRepository contactRepository;
+    private final OpportunityRepository opportunityRepository;
+    private final CrmCaseRepository caseRepository;
+    private final ContractRepository contractRepository;
 
     public DataScopeService(
             RoleDataScopeRepository scopeRepository,
             RecordShareRepository shareRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            LeadRepository leadRepository,
+            AccountRepository accountRepository,
+            ContactRepository contactRepository,
+            OpportunityRepository opportunityRepository,
+            CrmCaseRepository caseRepository,
+            ContractRepository contractRepository
     ) {
         this.scopeRepository = scopeRepository;
         this.shareRepository = shareRepository;
         this.userRepository = userRepository;
+        this.leadRepository = leadRepository;
+        this.accountRepository = accountRepository;
+        this.contactRepository = contactRepository;
+        this.opportunityRepository = opportunityRepository;
+        this.caseRepository = caseRepository;
+        this.contractRepository = contractRepository;
     }
 
     public <T> Specification<T> scope(DataObjectType type) {
@@ -63,6 +93,37 @@ public class DataScopeService {
 
     public void checkEdit(DataObjectType type, String owner, Long recordId) {
         check(type, owner, recordId, AccessLevel.EDIT);
+    }
+
+    public String ownerOf(DataObjectType type, Long recordId) {
+        switch (type) {
+            case LEAD:
+                return leadRepository.findById(recordId)
+                        .map(Lead::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            case ACCOUNT:
+                return accountRepository.findById(recordId)
+                        .map(Account::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            case CONTACT:
+                return contactRepository.findById(recordId)
+                        .map(Contact::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            case OPPORTUNITY:
+                return opportunityRepository.findById(recordId)
+                        .map(Opportunity::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            case CASE:
+                return caseRepository.findById(recordId)
+                        .map(CrmCase::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            case CONTRACT:
+                return contractRepository.findById(recordId)
+                        .map(Contract::getOwner)
+                        .orElseThrow(() -> new BizException("记录不存在"));
+            default:
+                throw new BizException("记录不存在");
+        }
     }
 
     private void check(

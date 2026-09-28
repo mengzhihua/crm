@@ -107,14 +107,15 @@ public class LeadService {
         return lead;
     }
 
+    public Lead getForEdit(Long id) {
+        Lead lead = get(id);
+        dataScopeService.checkEdit(DataObjectType.LEAD, lead.getOwner(), id);
+        return lead;
+    }
+
     public Lead save(Lead lead) {
         if (lead.getId() != null) {
-            Lead current = get(lead.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.LEAD,
-                    current.getOwner(),
-                    lead.getId()
-            );
+            Lead current = getForEdit(lead.getId());
             lead.setOwner(current.getOwner());
         }
         if (lead.getStatus() == null) {
@@ -127,14 +128,13 @@ public class LeadService {
     }
 
     public void delete(Long id) {
-        Lead lead = get(id);
-        dataScopeService.checkEdit(DataObjectType.LEAD, lead.getOwner(), id);
+        Lead lead = getForEdit(id);
         leadRepository.deleteById(id);
     }
 
     @Transactional
     public Map<String, Long> convert(Long id, LeadConvertRequest request) {
-        Lead lead = get(id);
+        Lead lead = getForEdit(id);
         if (lead.getStatus() == LeadStatus.CONVERTED) {
             throw new BizException("线索已转化");
         }

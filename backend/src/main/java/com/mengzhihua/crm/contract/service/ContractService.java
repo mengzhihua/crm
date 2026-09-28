@@ -112,20 +112,20 @@ public class ContractService {
         return contract;
     }
 
-    public void delete(Long id) {
+    public Contract getForEdit(Long id) {
         Contract contract = get(id);
         dataScopeService.checkEdit(DataObjectType.CONTRACT, contract.getOwner(), id);
+        return contract;
+    }
+
+    public void delete(Long id) {
+        Contract contract = getForEdit(id);
         contractRepository.deleteById(id);
     }
 
     public Contract save(Contract contract) {
         if (contract.getId() != null) {
-            Contract current = get(contract.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.CONTRACT,
-                    current.getOwner(),
-                    contract.getId()
-            );
+            Contract current = getForEdit(contract.getId());
             contract.setOwner(current.getOwner());
         }
         if (contract.getId() == null) {
@@ -134,7 +134,7 @@ public class ContractService {
                 contract.setStatus(ContractStatus.DRAFT);
             }
         } else {
-            Contract current = get(contract.getId());
+            Contract current = getForEdit(contract.getId());
             contract.setContractNo(current.getContractNo());
         }
         if (contract.getAmount() == null) {
@@ -172,7 +172,7 @@ public class ContractService {
 
     @Transactional
     public Contract activate(Long id) {
-        Contract contract = get(id);
+        Contract contract = getForEdit(id);
         ContractStatus oldStatus = contract.getStatus();
         if (contract.getStatus() != ContractStatus.PENDING_SIGN) {
             throw new BizException("只有待签署合同可以激活");
@@ -185,6 +185,11 @@ public class ContractService {
             Opportunity opportunity = opportunityRepository.findById(
                     contract.getOpportunityId()
             ).orElseThrow(() -> new BizException("商机不存在"));
+            dataScopeService.checkEdit(
+                    DataObjectType.OPPORTUNITY,
+                    opportunity.getOwner(),
+                    opportunity.getId()
+            );
             opportunity.setStage(OpportunityStage.CLOSED_WON);
             opportunity.setProbability(100);
             opportunity.setClosedAt(java.time.LocalDateTime.now());
@@ -202,7 +207,7 @@ public class ContractService {
     }
 
     public Contract terminate(Long id, ContractTerminateRequest request) {
-        Contract contract = get(id);
+        Contract contract = getForEdit(id);
         ContractStatus oldStatus = contract.getStatus();
         if (contract.getStatus() == ContractStatus.TERMINATED) {
             throw new BizException("合同已终止");
@@ -221,7 +226,7 @@ public class ContractService {
     }
 
     public List<PaymentPlan> plans(Long contractId) {
-        get(contractId);
+        getForEdit(contractId);
         List<PaymentPlan> plans = paymentPlanRepository
                 .findByContractIdOrderBySeqAsc(contractId);
         for (PaymentPlan plan : plans) {
@@ -231,7 +236,7 @@ public class ContractService {
     }
 
     public PaymentPlan addPlan(Long contractId, PaymentPlanRequest request) {
-        get(contractId);
+        getForEdit(contractId);
         PaymentPlan plan = new PaymentPlan();
         plan.setContractId(contractId);
         plan.setSeq(request.getSeq());
@@ -247,7 +252,7 @@ public class ContractService {
             Long contractId,
             PaymentRecordRequest request
     ) {
-        Contract contract = get(contractId);
+        Contract contract = getForEdit(contractId);
         if (request.getPlanId() != null) {
             PaymentPlan plan = paymentPlanRepository.findById(request.getPlanId())
                     .orElseThrow(() -> new BizException("回款计划不存在"));

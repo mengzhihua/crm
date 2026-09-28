@@ -4,6 +4,7 @@ import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.sales.entity.Account;
+import com.mengzhihua.crm.sales.entity.Contact;
 import com.mengzhihua.crm.sales.repository.AccountRepository;
 import com.mengzhihua.crm.sales.repository.ContactRepository;
 import com.mengzhihua.crm.sales.repository.OpportunityRepository;
@@ -71,14 +72,15 @@ public class AccountService {
         return account;
     }
 
+    public Account getForEdit(Long id) {
+        Account account = get(id);
+        dataScopeService.checkEdit(DataObjectType.ACCOUNT, account.getOwner(), id);
+        return account;
+    }
+
     public Account save(Account account) {
         if (account.getId() != null) {
-            Account current = get(account.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.ACCOUNT,
-                    current.getOwner(),
-                    account.getId()
-            );
+            Account current = getForEdit(account.getId());
             account.setOwner(current.getOwner());
         }
         if (account.getName() == null || account.getName().trim().isEmpty()) {
@@ -92,17 +94,42 @@ public class AccountService {
     }
 
     public void delete(Long id) {
-        Account account = get(id);
-        dataScopeService.checkEdit(DataObjectType.ACCOUNT, account.getOwner(), id);
+        Account account = getForEdit(id);
         accountRepository.deleteById(id);
     }
 
     public Map<String, Object> overview(Long id) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("account", get(id));
-        result.put("contacts", contactRepository.findByAccountId(id));
-        result.put("opportunities", opportunityRepository.findByAccountId(id));
-        result.put("cases", caseRepository.findByAccountId(id));
+        result.put("contacts", contactRepository.findAll(
+                accountPredicate(Contact.class, id, DataObjectType.CONTACT)
+        ));
+        result.put("opportunities", opportunityRepository.findAll(
+                accountPredicate(
+                        com.mengzhihua.crm.sales.entity.Opportunity.class,
+                        id,
+                        DataObjectType.OPPORTUNITY
+                )
+        ));
+        result.put("cases", caseRepository.findAll(
+                accountPredicate(
+                        com.mengzhihua.crm.service.entity.CrmCase.class,
+                        id,
+                        DataObjectType.CASE
+                )
+        ));
         return result;
+    }
+
+    private <T> Specification<T> accountPredicate(
+            Class<T> type,
+            Long id,
+            DataObjectType objectType
+    ) {
+        return (root, query, builder) -> builder.and(
+                builder.equal(root.get("accountId"), id),
+                dataScopeService.<T>scope(objectType)
+                        .toPredicate(root, query, builder)
+        );
     }
 }

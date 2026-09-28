@@ -179,14 +179,15 @@ public class CaseService {
         return crmCase;
     }
 
+    public CrmCase getForEdit(Long id) {
+        CrmCase crmCase = get(id);
+        dataScopeService.checkEdit(DataObjectType.CASE, crmCase.getOwner(), id);
+        return crmCase;
+    }
+
     public CrmCase save(CrmCase crmCase) {
         if (crmCase.getId() != null) {
-            CrmCase current = get(crmCase.getId());
-            dataScopeService.checkEdit(
-                    DataObjectType.CASE,
-                    current.getOwner(),
-                    crmCase.getId()
-            );
+            CrmCase current = getForEdit(crmCase.getId());
             crmCase.setOwner(current.getOwner());
         }
         if (crmCase.getStatus() == null) {
@@ -243,13 +244,12 @@ public class CaseService {
     }
 
     public void delete(Long id) {
-        CrmCase crmCase = get(id);
-        dataScopeService.checkEdit(DataObjectType.CASE, crmCase.getOwner(), id);
+        CrmCase crmCase = getForEdit(id);
         caseRepository.deleteById(id);
     }
 
     public CrmCase changeStatus(Long id, CaseStatusRequest request) {
-        CrmCase crmCase = get(id);
+        CrmCase crmCase = getForEdit(id);
         CaseStatus oldStatus = crmCase.getStatus();
         Set<CaseStatus> targets = ALLOWED_TRANSITIONS.get(crmCase.getStatus());
         if (targets == null || !targets.contains(request.getStatus())) {
@@ -286,7 +286,7 @@ public class CaseService {
     }
 
     public CrmCase escalate(Long id) {
-        CrmCase crmCase = get(id);
+        CrmCase crmCase = getForEdit(id);
         CasePriority oldPriority = crmCase.getPriority();
         if (crmCase.getStatus() == CaseStatus.CLOSED) {
             throw new BizException("已关闭工单不能升级");
@@ -307,7 +307,7 @@ public class CaseService {
     }
 
     public CrmCase assign(Long id, CaseAssignRequest request) {
-        CrmCase crmCase = get(id);
+        CrmCase crmCase = getForEdit(id);
         String oldOwner = crmCase.getOwner();
         String newOwner =
                 request.getOwner() == null || request.getOwner().trim().isEmpty()
@@ -338,11 +338,12 @@ public class CaseService {
     }
 
     public List<CaseComment> comments(Long id) {
+        get(id);
         return commentRepository.findByCaseIdOrderByCreatedAtAsc(id);
     }
 
     public CaseComment addComment(Long id, CaseCommentRequest request) {
-        CrmCase crmCase = get(id);
+        CrmCase crmCase = getForEdit(id);
         CaseComment comment = new CaseComment();
         comment.setCaseId(id);
         comment.setAuthor(
@@ -360,7 +361,7 @@ public class CaseService {
     }
 
     public CaseSurvey survey(Long id, CaseSurveyRequest request) {
-        CrmCase crmCase = get(id);
+        CrmCase crmCase = getForEdit(id);
         if (crmCase.getStatus() != CaseStatus.RESOLVED
                 && crmCase.getStatus() != CaseStatus.CLOSED) {
             throw new BizException("只有已解决或已关闭工单可以评价");
@@ -383,7 +384,7 @@ public class CaseService {
     }
 
     public CaseArticleLink addArticle(Long id, Long articleId) {
-        get(id);
+        getForEdit(id);
         return articleLinkRepository
                 .findByCaseIdAndArticleId(id, articleId)
                 .orElseGet(() -> {
@@ -395,6 +396,7 @@ public class CaseService {
     }
 
     public void removeArticle(Long id, Long articleId) {
+        getForEdit(id);
         CaseArticleLink link = articleLinkRepository
                 .findByCaseIdAndArticleId(id, articleId)
                 .orElseThrow(() -> new BizException("工单关联文章不存在"));

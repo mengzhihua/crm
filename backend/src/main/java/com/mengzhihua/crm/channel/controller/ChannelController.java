@@ -8,6 +8,7 @@ import com.mengzhihua.crm.channel.service.ChannelDispatcher;
 import com.mengzhihua.crm.common.DtoUtil;
 import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.Result;
+import com.mengzhihua.crm.common.enums.ChannelType;
 import com.mengzhihua.crm.common.enums.NotificationType;
 import com.mengzhihua.crm.notification.entity.Notification;
 import com.mengzhihua.crm.notification.repository.NotificationRepository;
@@ -51,6 +52,7 @@ public class ChannelController {
 
     @PostMapping
     public Result<ChannelConfig> add(@RequestBody ChannelConfig config) {
+        validate(config);
         return Result.ok(configRepository.save(config));
     }
 
@@ -59,6 +61,12 @@ public class ChannelController {
             @PathVariable Long id,
             @RequestBody ChannelConfig config
     ) {
+        ChannelConfig current = configRepository.findById(id)
+                .orElseThrow(() -> new com.mengzhihua.crm.common.BizException("渠道不存在"));
+        if (config.getSecret() == null || config.getSecret().trim().isEmpty()) {
+            config.setSecret(current.getSecret());
+        }
+        validate(config);
         config.setId(id);
         return Result.ok(configRepository.save(config));
     }
@@ -79,9 +87,7 @@ public class ChannelController {
         notification.setTitle("CRM 渠道测试");
         notification.setContent("这是一条渠道测试消息");
         notification = notificationRepository.save(notification);
-        config.setEnabled(true);
-        configRepository.save(config);
-        return Result.ok(dispatcher.dispatchSync(notification));
+        return Result.ok(dispatcher.deliverTo(config, notification));
     }
 
     @GetMapping("/deliveries")
@@ -95,5 +101,11 @@ public class ChannelController {
                 DtoUtil.pageable(page, size)
         );
         return Result.ok(DtoUtil.page(result, item -> (ChannelDelivery) item));
+    }
+
+    private void validate(ChannelConfig config) {
+        if (config.getType() == ChannelType.WEBHOOK) {
+            dispatcher.validateWebhookTarget(config.getTarget());
+        }
     }
 }
