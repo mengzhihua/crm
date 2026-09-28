@@ -5,6 +5,8 @@ import com.mengzhihua.crm.common.PageResult;
 import com.mengzhihua.crm.common.BizException;
 import com.mengzhihua.crm.sales.entity.Contact;
 import com.mengzhihua.crm.sales.repository.ContactRepository;
+import com.mengzhihua.crm.common.enums.DataObjectType;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -16,9 +18,14 @@ import java.util.List;
 @Service
 public class ContactService {
     private final ContactRepository contactRepository;
+    private final DataScopeService dataScopeService;
 
-    public ContactService(ContactRepository contactRepository) {
+    public ContactService(
+            ContactRepository contactRepository,
+            DataScopeService dataScopeService
+    ) {
         this.contactRepository = contactRepository;
+        this.dataScopeService = dataScopeService;
     }
 
     public PageResult<Contact> list(
@@ -38,7 +45,11 @@ public class ContactService {
             if (accountId != null) {
                 predicates.add(builder.equal(root.get("accountId"), accountId));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    builder.and(predicates.toArray(new Predicate[0])),
+                    dataScopeService.<Contact>scope(DataObjectType.CONTACT)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<Contact> result = contactRepository.findAll(
                 specification,
@@ -48,15 +59,28 @@ public class ContactService {
     }
 
     public Contact get(Long id) {
-        return contactRepository.findById(id)
+        Contact contact = contactRepository.findById(id)
                 .orElseThrow(() -> new BizException("联系人不存在"));
+        dataScopeService.checkRead(DataObjectType.CONTACT, contact.getOwner(), id);
+        return contact;
     }
 
     public Contact save(Contact contact) {
+        if (contact.getId() != null) {
+            Contact current = get(contact.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.CONTACT,
+                    current.getOwner(),
+                    contact.getId()
+            );
+            contact.setOwner(current.getOwner());
+        }
         return contactRepository.save(contact);
     }
 
     public void delete(Long id) {
+        Contact contact = get(id);
+        dataScopeService.checkEdit(DataObjectType.CONTACT, contact.getOwner(), id);
         contactRepository.deleteById(id);
     }
 }

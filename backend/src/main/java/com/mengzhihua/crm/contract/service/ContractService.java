@@ -9,7 +9,9 @@ import com.mengzhihua.crm.common.enums.OpportunityStage;
 import com.mengzhihua.crm.common.enums.PaymentStatus;
 import com.mengzhihua.crm.common.enums.RelatedType;
 import com.mengzhihua.crm.common.enums.NotificationType;
+import com.mengzhihua.crm.common.enums.DataObjectType;
 import com.mengzhihua.crm.notification.service.NotificationService;
+import com.mengzhihua.crm.permission.service.DataScopeService;
 import com.mengzhihua.crm.contract.dto.ContractTerminateRequest;
 import com.mengzhihua.crm.contract.dto.PaymentPlanRequest;
 import com.mengzhihua.crm.contract.dto.PaymentRecordRequest;
@@ -46,6 +48,7 @@ public class ContractService {
     private final OpportunityRepository opportunityRepository;
     private final FieldHistoryService fieldHistoryService;
     private final NotificationService notificationService;
+    private final DataScopeService dataScopeService;
 
     public ContractService(
             ContractRepository contractRepository,
@@ -54,7 +57,8 @@ public class ContractService {
             QuoteRepository quoteRepository,
             OpportunityRepository opportunityRepository,
             FieldHistoryService fieldHistoryService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            DataScopeService dataScopeService
     ) {
         this.contractRepository = contractRepository;
         this.paymentPlanRepository = paymentPlanRepository;
@@ -63,6 +67,7 @@ public class ContractService {
         this.opportunityRepository = opportunityRepository;
         this.fieldHistoryService = fieldHistoryService;
         this.notificationService = notificationService;
+        this.dataScopeService = dataScopeService;
     }
 
     public PageResult<Contract> list(
@@ -87,7 +92,11 @@ public class ContractService {
             if (accountId != null) {
                 predicates.add(builder.equal(root.get("accountId"), accountId));
             }
-            return builder.and(predicates.toArray(new Predicate[0]));
+            return builder.and(
+                    builder.and(predicates.toArray(new Predicate[0])),
+                    dataScopeService.<Contract>scope(DataObjectType.CONTRACT)
+                            .toPredicate(root, query, builder)
+            );
         };
         Page<Contract> result = contractRepository.findAll(
                 specification,
@@ -97,16 +106,28 @@ public class ContractService {
     }
 
     public Contract get(Long id) {
-        return contractRepository.findById(id)
+        Contract contract = contractRepository.findById(id)
                 .orElseThrow(() -> new BizException("合同不存在"));
+        dataScopeService.checkRead(DataObjectType.CONTRACT, contract.getOwner(), id);
+        return contract;
     }
 
     public void delete(Long id) {
-        get(id);
+        Contract contract = get(id);
+        dataScopeService.checkEdit(DataObjectType.CONTRACT, contract.getOwner(), id);
         contractRepository.deleteById(id);
     }
 
     public Contract save(Contract contract) {
+        if (contract.getId() != null) {
+            Contract current = get(contract.getId());
+            dataScopeService.checkEdit(
+                    DataObjectType.CONTRACT,
+                    current.getOwner(),
+                    contract.getId()
+            );
+            contract.setOwner(current.getOwner());
+        }
         if (contract.getId() == null) {
             contract.setContractNo(nextNo());
             if (contract.getStatus() == null) {
