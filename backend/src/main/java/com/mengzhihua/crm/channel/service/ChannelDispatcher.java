@@ -138,7 +138,7 @@ public class ChannelDispatcher {
             ChannelConfig config,
             Notification notification
     ) {
-        WebhookTarget target = resolveWebhookTarget(config.getTarget());
+        resolveWebhookTarget(config.getTarget());
         String body;
         try {
             body = objectMapper.writeValueAsString(notification);
@@ -147,9 +147,6 @@ public class ChannelDispatcher {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        if ("http".equalsIgnoreCase(target.uri.getScheme())) {
-            headers.set("Host", target.hostHeader);
-        }
         if (config.getSecret() != null && !config.getSecret().isEmpty()) {
             headers.set(
                     "X-CRM-Signature",
@@ -168,12 +165,8 @@ public class ChannelDispatcher {
         };
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(5000);
-        String targetUrl = target.uri.toString();
-        if ("http".equalsIgnoreCase(target.uri.getScheme())) {
-            targetUrl = target.pinnedUri.toString();
-        }
         ResponseEntity<String> response = new RestTemplate(factory).postForEntity(
-                targetUrl,
+                config.getTarget(),
                 new HttpEntity<>(body, headers),
                 String.class
         );
@@ -186,7 +179,7 @@ public class ChannelDispatcher {
         resolveWebhookTarget(target);
     }
 
-    private WebhookTarget resolveWebhookTarget(String target) {
+    private void resolveWebhookTarget(String target) {
         if (target == null || target.trim().isEmpty()) {
             throw new BizException("Webhook 地址不允许指向内网");
         }
@@ -206,26 +199,9 @@ public class ChannelDispatcher {
                     throw new BizException("Webhook 地址不允许指向内网");
                 }
             }
-            InetAddress address = addresses[0];
-            String hostHeader = uri.getHost();
-            if (uri.getPort() > 0) {
-                hostHeader += ":" + uri.getPort();
-            }
-            URI pinnedUri = new URI(
-                    uri.getScheme(),
-                    uri.getUserInfo(),
-                    address.getHostAddress(),
-                    uri.getPort(),
-                    uri.getPath(),
-                    uri.getQuery(),
-                    uri.getFragment()
-            );
-            return new WebhookTarget(uri, pinnedUri, hostHeader);
         } catch (IllegalArgumentException exception) {
             throw new BizException("Webhook 地址不允许指向内网");
         } catch (UnknownHostException exception) {
-            throw new BizException("Webhook 地址不允许指向内网");
-        } catch (java.net.URISyntaxException exception) {
             throw new BizException("Webhook 地址不允许指向内网");
         }
     }
@@ -269,15 +245,4 @@ public class ChannelDispatcher {
         }
     }
 
-    private static class WebhookTarget {
-        private final URI uri;
-        private final URI pinnedUri;
-        private final String hostHeader;
-
-        WebhookTarget(URI uri, URI pinnedUri, String hostHeader) {
-            this.uri = uri;
-            this.pinnedUri = pinnedUri;
-            this.hostHeader = hostHeader;
-        }
-    }
 }
